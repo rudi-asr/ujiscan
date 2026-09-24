@@ -139,6 +139,32 @@ async function pollScanResults(scanID) {
     poll();
 }
 
+// Format date safely
+function formatDate(dateString) {
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return dateString;
+        }
+        return date.toLocaleString();
+    } catch (e) {
+        return dateString;
+    }
+}
+
+// Calculate duration
+function formatDuration(startStr, endStr) {
+    try {
+        const start = new Date(startStr);
+        const end = new Date(endStr);
+        const ms = end - start;
+        const seconds = Math.round(ms / 1000);
+        return `${seconds}s`;
+    } catch (e) {
+        return 'unknown';
+    }
+}
+
 // Display scan results
 function displayResults(scan) {
     const resultsDiv = document.getElementById('results');
@@ -147,13 +173,18 @@ function displayResults(scan) {
     let html = `<div class="results-header">
         <h3>Results (${scan.results.length} tools)</h3>
         <div class="result-summary">
-            Target: <strong>${scan.target}</strong> | 
-            Started: <strong>${new Date(scan.started_at).toLocaleString()}</strong>
+            Target: <strong>${escapeHtml(scan.target)}</strong> | 
+            Started: <strong>${formatDate(scan.started_at)}</strong> | 
+            Duration: <strong>${formatDuration(scan.started_at, scan.ended_at)}</strong>
         </div>
     </div>`;
 
     scan.results.forEach((result, idx) => {
         const statusClass = result.success ? 'success' : 'error';
+        const args = (result.args || []).join(' ');
+        const output = result.stdout || result.stderr || '';
+        const truncated = output.length > 1000;
+        
         html += `
         <details class="result-item result-${statusClass}">
             <summary>
@@ -164,20 +195,33 @@ function displayResults(scan) {
             </summary>
             <div class="result-details">
                 <div class="command">
-                    <strong>Command:</strong> ${result.command} ${result.args.join(' ')}
+                    <strong>Command:</strong> <code>${escapeHtml(result.command)} ${escapeHtml(args)}</code>
                 </div>
                 <div class="exit-code">
                     <strong>Exit Code:</strong> ${result.exit_code}
-                </div>
-                ${result.stdout ? `<div class="output">
+                </div>`;
+        
+        if (result.stdout) {
+            html += `<div class="output">
                     <strong>Output:</strong>
-                    <pre>${escapeHtml(result.stdout.substring(0, 500))}${result.stdout.length > 500 ? '...' : ''}</pre>
-                </div>` : ''}
-                ${result.error ? `<div class="error">
-                    <strong>Error:</strong> ${result.error}
-                </div>` : ''}
-            </div>
-        </details>`;
+                    <pre>${escapeHtml(result.stdout.substring(0, 1000))}${truncated ? '...' : ''}</pre>
+                </div>`;
+        } else if (result.stderr) {
+            html += `<div class="error-output">
+                    <strong>Stderr:</strong>
+                    <pre>${escapeHtml(result.stderr.substring(0, 1000))}${truncated ? '...' : ''}</pre>
+                </div>`;
+        } else {
+            html += `<div class="no-output"><em>No output captured</em></div>`;
+        }
+        
+        if (result.error) {
+            html += `<div class="error">
+                    <strong>Error:</strong> ${escapeHtml(result.error)}
+                </div>`;
+        }
+        
+        html += `</div></details>`;
     });
 
     resultsDiv.innerHTML = html;
@@ -195,6 +239,7 @@ function addLog(message, level = 'info') {
 
 // HTML escape utility
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
