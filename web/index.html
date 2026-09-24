@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ujiscan - Penetration Testing Agent</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>ujiscan</h1>
+            <p>Agentic Penetration Testing Platform</p>
+        </header>
+
+        <main>
+            <section class="scan-section">
+                <h2>Start Scan</h2>
+                <form id="scanForm">
+                    <input 
+                        type="text" 
+                        id="target" 
+                        placeholder="Target (e.g., 192.168.1.1 or example.com)" 
+                        required
+                    >
+                    <button type="submit">Start Scan</button>
+                </form>
+            </section>
+
+            <section class="status-section">
+                <h2>Status</h2>
+                <div id="status">Ready</div>
+            </section>
+
+            <section class="logs-section">
+                <h2>Logs</h2>
+                <div id="logs" class="logs-container"></div>
+            </section>
+        </main>
+
+        <footer>
+            <p>ujiscan v0.1.0 | Offensive Security | <span id="apiStatus">API: checking...</span></p>
+        </footer>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
