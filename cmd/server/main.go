@@ -131,12 +131,42 @@ func Run() error {
 	log.Printf("  POST /api/scan/playbook  - Start playbook scan")
 	log.Printf("  GET  /api/scan/{id}      - Get scan details")
 	log.Printf("  DEL  /api/scan/{id}      - Delete scan")
+	log.Printf("CORS enabled for: http://localhost:8081, https://rudi-asr.github.io")
 
-	return http.ListenAndServe(Port, mux)
+	// Wrap mux with CORS middleware
+	corsHandler := corsMiddleware(mux)
+	return http.ListenAndServe(Port, corsHandler)
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprintf(w, `{"status":"ok","service":"ujiscan"}`)
+}
+
+// corsMiddleware adds CORS headers to allow requests from GitHub Pages & localhost
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Allow requests from GitHub Pages and localhost
+		origin := r.Header.Get("Origin")
+		if origin == "https://rudi-asr.github.io" || 
+		   origin == "http://localhost:8081" || 
+		   origin == "http://localhost:3000" ||
+		   strings.HasPrefix(origin, "http://127.0.0.1") {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
+		
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Max-Age", "3600")
+		
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		
+		next.ServeHTTP(w, r)
+	})
 }
