@@ -27,6 +27,9 @@
         <section id="scan-tab" class="tab-content active">
             <div class="form-section">
                 <h2>Start Scan</h2>
+                <div class="alert info">
+                    <strong>Note:</strong> Backend server required at http://localhost:8081 to execute scans
+                </div>
                 <form id="scanForm">
                     <div class="form-group">
                         <label>Target (e.g., 192.168.1.1 or example.com)</label>
@@ -69,8 +72,11 @@
         <!-- TOOLS TAB -->
         <section id="tools-tab" class="tab-content">
             <h2>Available Tools</h2>
+            <div class="alert info">
+                <strong>Note:</strong> Tools loaded from running backend server
+            </div>
             <div id="toolsList" class="tools-grid">
-                <div class="loading">Loading tools...</div>
+                <div class="loading">Loading tools from server...</div>
             </div>
         </section>
 
@@ -87,32 +93,42 @@
             <h2>Documentation</h2>
             <div class="docs-grid">
                 <div class="doc-card">
-                    <h3>README</h3>
+                    <h3>📖 README</h3>
                     <p>Quick start guide and architecture overview</p>
-                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/README.md" target="_blank">Read on GitHub →</a>
+                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/README.md" target="_blank">View →</a>
                 </div>
                 <div class="doc-card">
-                    <h3>DEVELOPMENT</h3>
+                    <h3>⚙️ DEVELOPMENT</h3>
                     <p>Detailed phase breakdown and known issues with fixes</p>
-                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/DEVELOPMENT.md" target="_blank">Read on GitHub →</a>
+                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/DEVELOPMENT.md" target="_blank">View →</a>
                 </div>
                 <div class="doc-card">
-                    <h3>HANDOFF_LLM</h3>
+                    <h3>🔄 HANDOFF_LLM</h3>
                     <p>Context for next LLM session and model switches</p>
-                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/HANDOFF_LLM.md" target="_blank">Read on GitHub →</a>
+                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/HANDOFF_LLM.md" target="_blank">View →</a>
                 </div>
                 <div class="doc-card">
-                    <h3>BEST PRACTICES</h3>
+                    <h3>✨ BEST PRACTICES</h3>
                     <p>LLM handoff best practices guide</p>
-                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/LLM_HANDOFF_BEST_PRACTICES.md" target="_blank">Read on GitHub →</a>
+                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/LLM_HANDOFF_BEST_PRACTICES.md" target="_blank">View →</a>
                 </div>
             </div>
 
             <div class="github-section">
-                <h3>📂 Repository Structure (from GitHub)</h3>
+                <h3>📂 Repository Structure</h3>
                 <div id="repoStructure" class="repo-tree">
                     <div class="loading">Loading repository structure...</div>
                 </div>
+            </div>
+
+            <div class="github-section">
+                <h3>📝 Key Files</h3>
+                <ul class="files-list">
+                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/cmd/server/main.go" target="_blank">cmd/server/main.go</a> - Server entry point</li>
+                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/internal/api/handlers.go" target="_blank">internal/api/handlers.go</a> - API endpoints</li>
+                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/internal/playbook/playbook.go" target="_blank">internal/playbook/playbook.go</a> - Playbook engine</li>
+                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/internal/ai/claude.go" target="_blank">internal/ai/claude.go</a> - Claude API integration</li>
+                </ul>
             </div>
         </section>
 
@@ -149,7 +165,9 @@
         // Load tools from server
         async function loadTools() {
             try {
-                const response = await fetch(`${SERVER}/api/tools`);
+                const response = await fetch(`${SERVER}/api/tools`, { 
+                    signal: AbortSignal.timeout(5000) 
+                });
                 const tools = await response.json();
                 const html = tools.map(t => `
                     <div class="tool-card">
@@ -161,7 +179,13 @@
                 `).join('');
                 document.getElementById('toolsList').innerHTML = html || '<p>No tools available</p>';
             } catch (error) {
-                document.getElementById('toolsList').innerHTML = `<p class="error">Error loading tools: ${error.message}</p>`;
+                document.getElementById('toolsList').innerHTML = `
+                    <div class="error-card">
+                        <p>⚠️ Cannot connect to backend server</p>
+                        <small>${error.message}</small>
+                        <p>Ensure server is running: <code>./ujiscan</code></p>
+                    </div>
+                `;
             }
         }
 
@@ -200,11 +224,11 @@
                 const contents = await response.json();
                 
                 const html = contents
-                    .filter(item => !item.name.startsWith('.'))
+                    .filter(item => !item.name.startsWith('.') && item.name !== 'web')
                     .map(item => `
-                        <div class="tree-item" style="padding-left: ${item.type === 'dir' ? '0' : '20px'}">
+                        <div class="tree-item">
                             <span class="tree-icon">${item.type === 'dir' ? '📁' : '📄'}</span>
-                            <a href="${item.html_url}" target="_blank">${item.name}</a>
+                            <a href="https://github.com/rudi-asr/ujiscan/tree/main/${item.path}" target="_blank">${item.name}</a>
                         </div>
                     `).join('');
                 
@@ -239,6 +263,7 @@
                     body: JSON.stringify(payload)
                 });
                 
+                if (!response.ok) throw new Error(`Server error: ${response.status}`);
                 const result = await response.json();
                 const scanId = result.id;
                 
@@ -260,6 +285,11 @@
                         completed = true;
                     }
                     attempts++;
+                }
+                
+                if (!completed) {
+                    log('Scan timeout', 'error');
+                    updateStatus('TIMEOUT');
                 }
             } catch (error) {
                 log(`Error: ${error.message}`, 'error');
@@ -320,7 +350,9 @@
 
         async function loadPlaybooksForSelect() {
             try {
-                const response = await fetch(`${SERVER}/api/playbooks`);
+                const response = await fetch(`${SERVER}/api/playbooks`, { 
+                    signal: AbortSignal.timeout(5000) 
+                });
                 const playbooks = await response.json();
                 const select = document.getElementById('playbook');
                 select.innerHTML = playbooks.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
@@ -330,7 +362,7 @@
         }
 
         // Initial load
-        loadTools();
+        loadPlaybooksTab();
     </script>
 </body>
 </html>

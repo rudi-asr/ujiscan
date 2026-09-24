@@ -489,3 +489,72 @@ footer a {
 footer a:hover {
     text-decoration: underline;
 }
+
+/* Alerts */
+.alert {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    border-left: 4px solid var(--accent);
+}
+
+.alert.info {
+    background-color: rgba(88, 166, 255, 0.1);
+    border-left-color: var(--accent);
+    color: var(--text-primary);
+}
+
+.alert strong {
+    font-weight: 600;
+}
+
+.error-card {
+    background-color: rgba(248, 81, 73, 0.1);
+    border: 1px solid var(--error);
+    border-radius: 6px;
+    padding: 15px;
+    color: var(--error);
+}
+
+.error-card p {
+    margin: 10px 0;
+}
+
+.error-card small {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.error-card code {
+    background-color: var(--bg-dark);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Files List */
+.files-list {
+    list-style: none;
+    padding: 0;
+}
+
+.files-list li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.files-list li:last-child {
+    border-bottom: none;
+}
+
+.files-list a {
+    color: var(--accent);
+    text-decoration: none;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.files-list a:hover {
+    text-decoration: underline;
+}
