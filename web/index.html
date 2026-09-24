@@ -687,7 +687,7 @@ function displayResults(scan) {
     scan.results.forEach((result, idx) => {
         html += `
             <div class="tool-result">
-                <h4>${idx + 1}. ${result.tool}</h4>
+                <h4>${idx + 1}. ${result.tool_name}</h4>
                 <div class="result-details">
                     <p><strong>Exit Code:</strong> ${result.exit_code}</p>
                     <p><strong>Command:</strong> <code>${escapeHtml(result.command)}</code></p>

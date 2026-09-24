@@ -21,10 +21,10 @@ func (e *Executor) ScanWithNmap(target string) (*models.ToolOutput, error) {
 	tmpFile.Close()
 	
 	args := []string{
-		"-sV",           // version detection
-		"-p-",           // all ports
+		"-sV",                   // version detection
+		"-p-",                   // all ports
+		"-oJ", tmpFile.Name(),   // output JSON to temp file (BEFORE target)
 		cleanTarget,
-		"-oJ", tmpFile.Name(), // output JSON to temp file
 	}
 
 	output, err := e.RunTool("nmap", args, models.PhaseRecon, target)
@@ -56,9 +56,9 @@ func (e *Executor) QuickNmapScan(target string) (*models.ToolOutput, error) {
 	tmpFile.Close()
 	
 	args := []string{
-		"-F",       // fast mode - common ports only
+		"-F",                    // fast mode - common ports only
+		"-oJ", tmpFile.Name(),   // output JSON to temp file (BEFORE target)
 		cleanTarget,
-		"-oJ", tmpFile.Name(), // output JSON to temp file
 	}
 
 	output, err := e.RunTool("nmap", args, models.PhaseRecon, target)
