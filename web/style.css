@@ -73,6 +73,12 @@ main {
     margin-bottom: 2rem;
 }
 
+@media (max-width: 1024px) {
+    main {
+        grid-template-columns: 1fr;
+    }
+}
+
 section {
     background-color: var(--bg-secondary);
     border: 1px solid var(--border);
@@ -142,6 +148,165 @@ button:active {
     border-left: 4px solid var(--success);
     font-family: 'Courier New', monospace;
     font-size: 0.95rem;
+}
+
+.status-running {
+    color: var(--warning);
+    font-weight: 600;
+}
+
+.status-completed {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.status-failed {
+    color: var(--error);
+    font-weight: 600;
+}
+
+.tools-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.tool-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--accent);
+}
+
+.tool-badge.unavailable {
+    border-color: var(--text-secondary);
+    color: var(--text-secondary);
+    opacity: 0.5;
+}
+
+.results-section {
+    grid-column: 1 / -1;
+}
+
+.results-container {
+    background-color: var(--bg-primary);
+    border-radius: 6px;
+    padding: 1rem;
+}
+
+.results-header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.results-header h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.result-summary {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.result-item {
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.result-item summary {
+    padding: 0.75rem 1rem;
+    background-color: var(--bg-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    user-select: none;
+}
+
+.result-item summary:hover {
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
+.tool-name {
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 80px;
+}
+
+.phase-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--accent);
+    color: white;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.result-success .status-badge {
+    background-color: var(--success);
+    color: white;
+}
+
+.result-error .status-badge {
+    background-color: var(--error);
+    color: white;
+}
+
+.duration {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-left: auto;
+}
+
+.result-details {
+    padding: 1rem;
+    background-color: var(--bg-primary);
+    border-top: 1px solid var(--border);
+}
+
+.result-details > div {
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.result-details strong {
+    color: var(--accent);
+}
+
+.command {
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+}
+
+.output pre {
+    background-color: var(--bg-secondary);
+    padding: 0.75rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5rem 0 0 0;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.error {
+    color: var(--error);
 }
 
 .logs-container {

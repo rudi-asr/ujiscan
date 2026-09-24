@@ -6,6 +6,12 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/rudi-asr/ujiscan/internal/api"
+	"github.com/rudi-asr/ujiscan/internal/executor"
+	"github.com/rudi-asr/ujiscan/internal/store"
+	"github.com/rudi-asr/ujiscan/internal/tools"
 )
 
 const (
@@ -18,6 +24,15 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
+
+	// Initialize stores and executors
+	scanStore := store.NewScanStore()
+	toolExecutor := tools.NewExecutor()
+	toolExecutor.InitializeDefaultTools()
+	scanExecutor := executor.NewScanExecutor(scanStore, toolExecutor)
+
+	// Create API handler
+	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor)
 
 	// Routes
 	mux := http.NewServeMux()
@@ -33,12 +48,50 @@ func Run() error {
 	
 	mux.Handle("/", http.FileServer(http.Dir(webDir)))
 
-	// API health check
+	// API routes
 	mux.HandleFunc("/api/status", handleStatus)
+	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
+	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
+	
+	// Scan API routes with custom handler
+	mux.HandleFunc("/api/scan", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			apiHandler.HandleStartScan(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Dynamic scan routes: /api/scan/{id}
+	mux.HandleFunc("/api/scan/", func(w http.ResponseWriter, r *http.Request) {
+		// Extract scan ID from path: /api/scan/{id}
+		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/scan/"), "/")
+		if len(parts) == 0 || parts[0] == "" {
+			http.Error(w, "Scan ID required", http.StatusBadRequest)
+			return
+		}
+
+		scanID := parts[0]
+
+		switch r.Method {
+		case http.MethodGet:
+			apiHandler.HandleGetScan(w, r, scanID)
+		case http.MethodDelete:
+			apiHandler.HandleDeleteScan(w, r, scanID)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	// Start server
 	log.Printf("ujiscan server starting on http://localhost%s", Port)
-	log.Printf("Serving static files from: %s", webDir)
+	log.Printf("API endpoints:")
+	log.Printf("  GET  /api/status       - Server health")
+	log.Printf("  GET  /api/tools        - List tools")
+	log.Printf("  GET  /api/stats        - Scan statistics")
+	log.Printf("  POST /api/scan         - Start scan")
+	log.Printf("  GET  /api/scan/{id}    - Get scan details")
+	log.Printf("  DEL  /api/scan/{id}    - Delete scan")
 
 	return http.ListenAndServe(Port, mux)
 }

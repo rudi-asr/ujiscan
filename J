@@ -1,0 +1,14 @@
+# Nmap 7.99 scan initiated Thu Sep 24 23:30:32 2026 as: nmap -F -oJ - 127.0.0.1
+Failed to resolve "-".
+Bare '-': did you put a space between '--'?
+Nmap scan report for localhost (127.0.0.1)
+Host is up (0.000054s latency).
+Not shown: 95 closed tcp ports (conn-refused)
+PORT     STATE SERVICE
+53/tcp   open  domain
+5000/tcp open  upnp
+7070/tcp open  realserver
+8080/tcp open  http-proxy
+8081/tcp open  blackice-icecap
+
+# Nmap done at Thu Sep 24 23:30:37 2026 -- 1 IP address (1 host up) scanned in 4.52 seconds
