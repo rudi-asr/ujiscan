@@ -45,6 +45,12 @@ type ExecutionContext struct {
 	Conditions   map[string]interface{}        // evaluated conditions for branching
 	CurrentPhase PhaseType
 	StepResults  map[string]*models.ToolOutput // step_id -> output
+	
+	// AI-specific fields for agentic loop
+	IsAgentic    bool                      // true if using AI decision-making
+	AIObjective  string                    // what the scan is trying to achieve
+	AIDecisions  map[string]string         // step_id -> AI decision
+	AIReasonings map[string]string         // step_id -> AI reasoning
 }
 
 // NewPlaybook creates a new playbook

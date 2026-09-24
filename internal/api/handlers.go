@@ -270,3 +270,81 @@ func (h *Handler) HandleListPlaybooks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(infos)
 }
+
+// HandleAgenticPlaybookScan starts an agentic scan using a playbook with AI decision-making
+func (h *Handler) HandleAgenticPlaybookScan(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Parse request body with additional objective field
+	var req struct {
+		Playbook  string `json:"playbook"`
+		Target    string `json:"target"`
+		Objective string `json:"objective"`
+	}
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid request: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Map request name to playbook filename
+	searchName := strings.ToLower(strings.TrimSpace(req.Playbook))
+	var playbookFilename string
+	
+	// Direct mapping from request to filename
+	switch searchName {
+	case "network-discovery", "network discovery":
+		playbookFilename = "network-discovery"
+	case "vulnerability-quick", "vulnerability quick scan":
+		playbookFilename = "vulnerability-quick"
+	case "web-full-scan", "web server full scan", "web-server-full-scan":
+		playbookFilename = "web-full-scan"
+	default:
+		playbookFilename = req.Playbook
+	}
+
+	if strings.TrimSpace(req.Target) == "" {
+		http.Error(w, "Target cannot be empty", http.StatusBadRequest)
+		return
+	}
+
+	if strings.TrimSpace(req.Objective) == "" {
+		// Default objective if not provided
+		req.Objective = fmt.Sprintf("Comprehensive penetration test of %s", req.Target)
+	}
+
+	// Create scan
+	scan, err := h.scanStore.CreateScan(req.Target)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to create scan: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// Start agentic playbook execution asynchronously
+	go func() {
+		fmt.Printf("[handler] Starting AGENTIC playbook execution: %s for scan %s (objective: %s)\n", playbookFilename, scan.ID, req.Objective)
+		err := h.playbookEngine.ExecuteAgenticPlaybook(scan.ID, playbookFilename, req.Target, req.Objective)
+		fmt.Printf("[handler] Agentic playbook execution completed with error: %v\n", err)
+		if err != nil {
+			fmt.Printf("[handler] Agentic playbook execution error: %v\n", err)
+			// Update scan with error
+			h.scanStore.UpdateScanStatus(scan.ID, models.ScanStatusFailed)
+		} else {
+			// Verify scan has results
+			finalScan, _ := h.scanStore.GetScan(scan.ID)
+			fmt.Printf("[handler] After agentic execution - scan has %d results\n", len(finalScan.Results))
+		}
+	}()
+
+	// Return response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(ScanResponse{
+		ID:     scan.ID,
+		Target: scan.Target,
+		Status: string(scan.Status),
+	})
+}

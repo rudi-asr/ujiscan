@@ -68,18 +68,40 @@ func Run() error {
 		}
 	})
 
-	// Playbook scan endpoint
+	// Playbook scan endpoint (supports both regular and agentic via query param or path)
 	mux.HandleFunc("/api/scan/playbook", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
-			apiHandler.HandlePlaybookScan(w, r)
+			// Check if this is agentic mode (by query param or path ending with /agentic)
+			isAgentic := r.URL.Query().Get("agentic") == "true" || strings.HasSuffix(r.URL.Path, "/agentic")
+			if isAgentic {
+				apiHandler.HandleAgenticPlaybookScan(w, r)
+			} else {
+				apiHandler.HandlePlaybookScan(w, r)
+			}
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Alternative agentic endpoint for convenience
+	mux.HandleFunc("/api/agentic", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			apiHandler.HandleAgenticPlaybookScan(w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
 
 	// Dynamic scan routes: /api/scan/{id}
+	// Must come AFTER specific routes like /api/scan/playbook
 	mux.HandleFunc("/api/scan/", func(w http.ResponseWriter, r *http.Request) {
 		// Extract scan ID from path: /api/scan/{id}
+		// Skip if this is a playbook-specific route
+		if strings.Contains(r.URL.Path, "/playbook") {
+			http.Error(w, "Not found", http.StatusNotFound)
+			return
+		}
+
 		parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/scan/"), "/")
 		if len(parts) == 0 || parts[0] == "" {
 			http.Error(w, "Scan ID required", http.StatusBadRequest)
