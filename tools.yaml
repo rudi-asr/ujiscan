@@ -8,7 +8,7 @@
 schema_version: "1.0"
 description: "Tool catalog for ujiscan - based on OWASP WSTG methodology"
 
-# OWASP WSTG phases (https://owasp.org/www-project-web-security-testing-guide/v4.2/)
+# OWASP WSTG phases
 phases:
   - id: "information_gathering"
     order: 1
@@ -27,301 +27,326 @@ phases:
     name: "Identity Management Testing"
     description: "Test authentication and authorization mechanisms"
     owasp_wstg: "WSTG-IDNT"
-    
-  - id: "authentication"
-    order: 4
-    name: "Authentication Testing"
-    description: "Test login, session management, password policies"
-    owasp_wstg: "WSTG-ATHN"
-    
-  - id: "authorization"
-    order: 5
-    name: "Authorization Testing"
-    description: "Test access controls and privilege escalation"
-    owasp_wstg: "WSTG-AUTZ"
-    
-  - id: "session_management"
-    order: 6
-    name: "Session Management Testing"
-    description: "Test session handling and timeout"
-    owasp_wstg: "WSTG-SESS"
-    
-  - id: "input_validation"
-    order: 7
-    name: "Input Validation Testing"
-    description: "Test input handling - injection, XSS, path traversal"
-    owasp_wstg: "WSTG-INPV"
-    
-  - id: "business_logic"
-    order: 8
-    name: "Business Logic Testing"
-    description: "Test business logic flaws and workflows"
-    owasp_wstg: "WSTG-BUSL"
-    
-  - id: "client_side"
-    order: 9
-    name: "Client-side Testing"
-    description: "Test DOM, JavaScript, client-side logic"
-    owasp_wstg: "WSTG-CLNT"
-    
-  - id: "api_testing"
-    order: 10
-    name: "API Testing"
-    description: "Test REST/GraphQL APIs"
-    owasp_wstg: "WSTG-APIT"
 
 # Tools organized by OWASP phase
 tools:
   # Phase 1: Information Gathering
   - id: "whois"
     name: "whois"
-    description: "Domain registration lookup"
+    description: "Domain registration and ownership lookup"
     phase: "information_gathering"
     category: "osint"
-    
-    execution:
+    tags: ["domain", "passive", "info-gathering"]
+    mode_applicability: ["reconnaissance", "bug-bounty", "red-team"]
+    target_types: ["domain", "ip"]
+    command:
       command: "whois"
       args: "{target}"
       timeout: 10
-      
-    output:
-      format: "text"
-      
+    execution:
+      command: "whois"
+      args: "{target}"
+      timeout_seconds: 10
+      timeout_behavior: "kill"
+      require_root: false
     installation:
+      check_command: "whois --version"
+      check_exit_code: 0
       macos: "brew install whois"
       linux: "apt-get install whois"
-      
-    mode: 
-      - "web"
-      - "network"
-      - "api"
+      windows: "choco install whois"
+    output:
+      format: "text"
+      stderr_on_failure: true
+    reference:
+      owasp: "WSTG-INFO-04"
+      technique: "Whois lookup"
 
   - id: "dig"
     name: "dig"
-    description: "DNS queries and zone transfers"
+    description: "DNS enumeration and lookup tool"
     phase: "information_gathering"
     category: "dns"
-    
-    execution:
+    tags: ["dns", "passive", "enumeration"]
+    mode_applicability: ["reconnaissance", "bug-bounty", "red-team"]
+    target_types: ["domain"]
+    command:
       command: "dig"
       args: "{target} ANY"
       timeout: 10
-      
-    output:
-      format: "text"
-      
+    execution:
+      command: "dig"
+      args: "{target} ANY"
+      timeout_seconds: 10
+      timeout_behavior: "kill"
+      require_root: false
     installation:
+      check_command: "dig -v"
+      check_exit_code: 0
       macos: "brew install bind"
       linux: "apt-get install dnsutils"
-      
-    mode:
-      - "web"
-      - "network"
+      windows: "choco install bind-toolsonly"
+    output:
+      format: "text"
+      stderr_on_failure: true
+    reference:
+      owasp: "WSTG-INFO-05"
+      technique: "DNS enumeration"
 
-  # Phase 2: Configuration Analysis
   - id: "nmap"
     name: "nmap"
-    description: "Network reconnaissance - port scanning and service detection"
+    description: "Network mapper - port scanning and service detection"
     phase: "configuration_analysis"
-    category: "network_scan"
-    
+    category: "network"
+    tags: ["port-scan", "service-detect", "network-recon"]
+    mode_applicability: ["reconnaissance", "red-team", "network-scan"]
+    target_types: ["ip", "ip_range", "cidr", "domain"]
     variants:
       quick:
-        args: "-F -oX"  # Top 100 ports, XML output
-        timeout: 20
-        description: "Quick port scan"
-        
-      standard:
-        args: "-sV -p 1-65535 -oX"  # All ports, version detection
-        timeout: 120
-        description: "Full port scan with service version"
-    
+        description: "Fast scan - top 100 ports"
+        command_args: ["-F"]
+        timeout_seconds: 30
+      full:
+        description: "Full scan - all ports"
+        command_args: ["-p-"]
+        timeout_seconds: 120
+      aggressive:
+        description: "Aggressive scan with scripts"
+        command_args: ["-A", "-T4"]
+        timeout_seconds: 120
+    command:
+      command: "nmap"
+      args: "-F -oX {output} {target}"
+      timeout: 30
     execution:
+      command: "nmap"
+      args: "-F -oX {output} {target}"
+      timeout_seconds: 30
+      timeout_behavior: "kill"
+      require_root: false
       default_variant: "quick"
-      timeout: 20
-      
-    output:
-      format: "xml"
-      parser: "xml"
-      
     installation:
+      check_command: "nmap --version"
+      check_exit_code: 0
       macos: "brew install nmap"
       linux: "apt-get install nmap"
-      
-    mode:
-      - "network"
-      - "web"
-      - "api"
-      
+      windows: "choco install nmap"
+    output:
+      format: "xml"
+      parser: "nmap_xml"
+      stderr_on_failure: true
     reference:
-      owasp: "WSTG-CONF-01"
+      owasp: "WSTG-INFO-06"
+      technique: "Network scanning"
 
-  # Phase 7: Input Validation - Vulnerability Scanning
   - id: "nuclei"
     name: "nuclei"
     description: "Template-based vulnerability scanner"
-    phase: "input_validation"
-    category: "vulnerability_scan"
-    
+    phase: "identification"
+    category: "vulnerability"
+    tags: ["vuln-scan", "template-based", "fast"]
+    mode_applicability: ["hunt", "bug-bounty", "red-team"]
+    target_types: ["url", "domain"]
+    variants:
+      quick:
+        description: "Quick scan - common templates"
+        command_args: ["-t", "http/misconfiguration"]
+        timeout_seconds: 60
+      full:
+        description: "Full template suite"
+        command_args: []
+        timeout_seconds: 300
+    command:
+      command: "nuclei"
+      args: "-u {target} -jsonl"
+      timeout: 60
     execution:
       command: "nuclei"
       args: "-u {target} -jsonl"
-      timeout: 30
-      
+      timeout_seconds: 60
+      timeout_behavior: "kill"
+      require_root: false
+      default_variant: "quick"
+    installation:
+      check_command: "nuclei -version"
+      check_exit_code: 0
+      macos: "brew install nuclei"
+      linux: "apt-get install nuclei"
+      windows: "choco install nuclei"
     output:
       format: "jsonl"
-      parser: "jsonl"
-      
-    installation:
-      macos: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
-      linux: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
-      
-    mode:
-      - "web"
-      - "api"
-      
+      parser: "nuclei_jsonl"
+      stderr_on_failure: true
     reference:
-      owasp: "WSTG-INPV-01 (SQL Injection), WSTG-INPV-02 (XSS)"
+      owasp: "WSTG-APIT-01"
+      technique: "Vulnerability scanning"
 
-  # Phase 10: API Testing
   - id: "curl"
     name: "curl"
-    description: "HTTP client for manual API testing and PoC"
-    phase: "api_testing"
-    category: "utility"
-    
+    description: "HTTP client for web probing and header analysis"
+    phase: "configuration_analysis"
+    category: "http"
+    tags: ["http", "headers", "web-probe"]
+    mode_applicability: ["reconnaissance", "hunt", "bug-bounty"]
+    target_types: ["url"]
+    command:
+      command: "curl"
+      args: "-i -v {target}"
+      timeout: 10
     execution:
       command: "curl"
-      args: "{url}"
-      timeout: 10
-      
+      args: "-i -v {target}"
+      timeout_seconds: 10
+      timeout_behavior: "kill"
+      require_root: false
+    installation:
+      check_command: "curl --version"
+      check_exit_code: 0
+      macos: "brew install curl"
+      linux: "apt-get install curl"
+      windows: "choco install curl"
     output:
       format: "text"
       capture_headers: true
-      
-    mode:
-      - "web"
-      - "api"
+      stderr_on_failure: true
+    reference:
+      owasp: "WSTG-INFO-09"
+      technique: "HTTP header analysis"
 
-# Engagement modes based on target type detection
-engagement_modes:
-  - id: "web-application"
-    name: "Web Application Testing"
-    description: "Full web app security testing"
-    target_detection:
-      - "is_url"
-      - "has_http_port"
-    
+# Engagement modes - automation orchestration
+modes:
+  - id: "reconnaissance"
+    name: "Reconnaissance"
+    description: "Passive information gathering and network discovery"
+    target_detection: ["domain", "ip", "url"]
+    parallel_enabled: true
     execution_order:
       - phase: "information_gathering"
         tools: ["whois", "dig"]
         parallel: true
-        
       - phase: "configuration_analysis"
-        tools: ["nmap"]
-        parallel: false
-        
-      - phase: "input_validation"
-        tools: ["nuclei"]
-        parallel: false
-        
-      - phase: "api_testing"
-        tools: ["curl"]
-        parallel: false
-    
+        tools: ["nmap", "curl"]
+        parallel: true
     reference:
-      owasp: "OWASP Web Security Testing Guide v4.2"
+      owasp: "WSTG-INFO"
+      methodology: "OSINT-first approach"
 
-  - id: "network-reconnaissance"
-    name: "Network Reconnaissance"
-    description: "Network-focused security testing"
-    target_detection:
-      - "is_ip"
-      - "is_cidr"
-      - "is_ip_range"
-    
+  - id: "hunt"
+    name: "Vulnerability Hunt"
+    description: "Active vulnerability scanning and enumeration"
+    target_detection: ["url", "domain"]
+    parallel_enabled: true
     execution_order:
       - phase: "information_gathering"
-        tools: ["whois"]
+        tools: ["whois", "dig"]
+        parallel: true
+      - phase: "configuration_analysis"
+        tools: ["nmap", "curl"]
+        parallel: true
+      - phase: "identification"
+        tools: ["nuclei"]
         parallel: false
-        
+    reference:
+      owasp: "WSTG"
+      methodology: "Template-based vulnerability detection"
+
+  - id: "red-team"
+    name: "Red Team Assessment"
+    description: "Full adversarial evaluation (recon -> hunt -> verify)"
+    target_detection: ["domain", "ip", "url"]
+    parallel_enabled: false
+    execution_order:
+      - phase: "information_gathering"
+        tools: ["whois", "dig"]
+        parallel: true
+      - phase: "configuration_analysis"
+        tools: ["nmap", "curl"]
+        parallel: false
+      - phase: "identification"
+        tools: ["nuclei"]
+        parallel: false
+    reference:
+      owasp: "WSTG"
+      methodology: "Full pentest workflow"
+
+  - id: "network-scan"
+    name: "Network Scanning"
+    description: "Network-only reconnaissance (no web app testing)"
+    target_detection: ["ip", "ip_range", "cidr"]
+    parallel_enabled: true
+    execution_order:
       - phase: "configuration_analysis"
         tools: ["nmap"]
-        parallel: true  # Can parallelize network scans
-        
+        parallel: false
     reference:
-      owasp: "OWASP Testing Guide - Network Testing"
+      methodology: "Network discovery and mapping"
 
-# Testing methodologies (from OWASP WSTG)
-methodologies:
-  - name: "SQL Injection Testing"
-    owasp_id: "WSTG-INPV-05"
-    description: "Test application for SQL injection vulnerabilities"
-    tools: ["nuclei", "curl"]
-    manual_steps:
-      - "Identify database-backed queries"
-      - "Inject single quote to detect backend"
-      - "Test boolean-based blind SQLi"
-      - "Test time-based blind SQLi"
-      - "Test error-based SQLi"
-      - "Use sqlmap for automated exploitation (if available)"
-    
-  - name: "Cross-Site Scripting Testing"
-    owasp_id: "WSTG-INPV-01"
-    description: "Test application for XSS vulnerabilities"
-    tools: ["nuclei", "curl"]
-    manual_steps:
-      - "Identify input points (URL params, forms, headers)"
-      - "Inject <script>alert('xss')</script>"
-      - "Test DOM-based XSS"
-      - "Test stored XSS in database"
-      - "Test reflected XSS in output"
-      - "Use dalfox or xsstrike for semi-automated testing"
-    
-  - name: "Authentication Testing"
-    owasp_id: "WSTG-ATHN"
-    description: "Test authentication mechanisms"
-    tools: ["curl", "nuclei"]
-    manual_steps:
-      - "Test default credentials"
-      - "Test weak passwords"
-      - "Test account lockout behavior"
-      - "Test password recovery"
-      - "Test multi-factor authentication bypass"
-      - "Test session fixation"
+# Engagement types for reporting
+engagement_types:
+  - id: "bug-bounty"
+    name: "Bug Bounty"
+    description: "Bug bounty program assessment"
+    report_format: "json"
+    scope_required: true
+    verification_required: true
+    cvss_scoring: true
 
-# Scope validation (based on PTES - Penetration Testing Execution Standard)
-scope_rules:
-  - pattern: "{domain}"
-    description: "Test exact domain only"
-    example: "example.com"
-    
-  - pattern: "*.{domain}"
-    description: "Test domain and all subdomains"
-    example: "*.example.com"
-    
-  - pattern: "{cidr}"
-    description: "Test network range"
-    example: "192.168.1.0/24"
+  - id: "red-team"
+    name: "Red Team"
+    description: "Authorized red team exercise"
+    report_format: "markdown"
+    scope_required: true
+    verification_required: false
+    cvss_scoring: false
 
-# Finding severity ratings (using CVSS v3.1 base)
+  - id: "ctf"
+    name: "Capture The Flag"
+    description: "CTF competition scoring"
+    report_format: "json"
+    scope_required: false
+    verification_required: false
+    cvss_scoring: false
+
+  - id: "exploration"
+    name: "Exploration"
+    description: "Learning and exploration mode"
+    report_format: "text"
+    scope_required: false
+    verification_required: false
+    cvss_scoring: false
+
+# Severity levels mapped to CVSS
 severity_levels:
-  - id: "critical"
-    cvss_range: "9.0-10.0"
-    description: "Immediate risk to system or data"
-    
-  - id: "high"
-    cvss_range: "7.0-8.9"
-    description: "Significant vulnerability requiring urgent fix"
-    
-  - id: "medium"
-    cvss_range: "4.0-6.9"
-    description: "Moderate risk"
-    
+  - id: "info"
+    cvss_range: "0.0-0.0"
+    description: "Informational findings"
+
   - id: "low"
     cvss_range: "0.1-3.9"
-    description: "Minor issue"
-    
-  - id: "info"
-    cvss_range: "0.0"
-    description: "Informational finding"
+    description: "Low severity vulnerabilities"
+
+  - id: "medium"
+    cvss_range: "4.0-6.9"
+    description: "Medium severity vulnerabilities"
+
+  - id: "high"
+    cvss_range: "7.0-8.9"
+    description: "High severity vulnerabilities"
+
+  - id: "critical"
+    cvss_range: "9.0-10.0"
+    description: "Critical severity vulnerabilities"
+
+# Scope patterns for validation
+scope_patterns:
+  - pattern: "*.example.com"
+    description: "Subdomains under example.com"
+    example: "api.example.com"
+
+  - pattern: "192.168.0.0/16"
+    description: "Internal network range"
+    example: "192.168.1.100"
+
+  - pattern: "10.0.0.0/8"
+    description: "Private network range"
+    example: "10.0.0.5"

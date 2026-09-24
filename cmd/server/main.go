@@ -11,6 +11,7 @@ import (
 	"github.com/rudi-asr/ujiscan/internal/api"
 	"github.com/rudi-asr/ujiscan/internal/executor"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
+	"github.com/rudi-asr/ujiscan/internal/registry"
 	"github.com/rudi-asr/ujiscan/internal/store"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
@@ -26,11 +27,30 @@ func Run() error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
+	// Load registry from tools.yaml
+	toolsYAML := filepath.Join(projectRoot, "tools.yaml")
+	reg, err := registry.LoadRegistry(toolsYAML)
+	if err != nil {
+		log.Printf("Warning: Failed to load tools registry: %v", err)
+		log.Printf("Using legacy tool executor instead")
+	}
+
 	// Initialize stores and executors
 	scanStore := store.NewScanStore()
 	toolExecutor := tools.NewExecutor()
 	toolExecutor.InitializeDefaultTools()
 	scanExecutor := executor.NewScanExecutor(scanStore, toolExecutor)
+
+	// Create registry executor if registry loaded
+	var regExecutor *tools.RegistryExecutor
+	if reg != nil {
+		regExecutor = tools.NewRegistryExecutor(reg)
+		if err := regExecutor.ValidateRegistry(); err != nil {
+			log.Printf("Warning: Registry validation failed: %v", err)
+		} else {
+			log.Printf("✅ Tool registry loaded successfully (%d tools, %d modes)", len(reg.Tools), len(reg.Modes))
+		}
+	}
 
 	// Initialize playbook engine
 	playbookLoader := playbook.NewPlaybookLoader(filepath.Join(projectRoot, "playbooks"))

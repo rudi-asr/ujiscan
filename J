@@ -1,5 +1,5 @@
-# Nmap 7.99 scan initiated Fri Sep 25 00:10:46 2026 as: nmap -F -oJ mitracakra.digital /var/folders/j0/gpkhmtc52sscsbtnrktdtvwm0000gn/T/nmap_quick_3532027136.json
-Unable to split netmask from target expression: "/var/folders/j0/gpkhmtc52sscsbtnrktdtvwm0000gn/T/nmap_quick_3532027136.json"
+# Nmap 7.99 scan initiated Fri Sep 25 01:55:29 2026 as: nmap -F -oJ /var/folders/j0/gpkhmtc52sscsbtnrktdtvwm0000gn/T/nmap_quick_3859371421.json mitracakra.digital
+Unable to split netmask from target expression: "/var/folders/j0/gpkhmtc52sscsbtnrktdtvwm0000gn/T/nmap_quick_3859371421.json"
 Nmap scan report for mitracakra.digital (43.165.198.227)
 Host is up (0.033s latency).
 
@@ -105,4 +105,4 @@ PORT      STATE SERVICE
 49156/tcp open  unknown
 49157/tcp open  unknown
 
-# Nmap done at Fri Sep 25 00:10:48 2026 -- 1 IP address (1 host up) scanned in 2.95 seconds
+# Nmap done at Fri Sep 25 01:55:30 2026 -- 1 IP address (1 host up) scanned in 1.22 seconds
