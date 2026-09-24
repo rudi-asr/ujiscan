@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +12,7 @@ import (
 func (e *Executor) ScanWithNmap(target string) (*models.ToolOutput, error) {
 	cleanTarget := CleanTarget(target)
 	
-	tmpFile, err := ioutil.TempFile("", "nmap_*.json")
+	tmpFile, err := ioutil.TempFile("", "nmap_*.xml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -23,7 +22,7 @@ func (e *Executor) ScanWithNmap(target string) (*models.ToolOutput, error) {
 	args := []string{
 		"-sV",                   // version detection
 		"-p-",                   // all ports
-		"-oJ", tmpFile.Name(),   // output JSON to temp file (BEFORE target)
+		"-oX", tmpFile.Name(),   // output XML to temp file (more reliable)
 		cleanTarget,
 	}
 
@@ -32,13 +31,12 @@ func (e *Executor) ScanWithNmap(target string) (*models.ToolOutput, error) {
 		return output, err
 	}
 	
-	jsonData, readErr := ioutil.ReadFile(tmpFile.Name())
+	xmlData, readErr := ioutil.ReadFile(tmpFile.Name())
 	if readErr == nil {
-		output.Stdout = string(jsonData)
+		output.Stdout = string(xmlData)
 		var parsed interface{}
-		if parseErr := json.Unmarshal(jsonData, &parsed); parseErr == nil {
-			output.Parsed = parsed
-		}
+		// Try to parse XML if needed (optional for now)
+		_ = parsed
 	}
 
 	return output, nil
@@ -48,7 +46,7 @@ func (e *Executor) ScanWithNmap(target string) (*models.ToolOutput, error) {
 func (e *Executor) QuickNmapScan(target string) (*models.ToolOutput, error) {
 	cleanTarget := CleanTarget(target)
 	
-	tmpFile, err := ioutil.TempFile("", "nmap_quick_*.json")
+	tmpFile, err := ioutil.TempFile("", "nmap_quick_*.xml")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp file: %w", err)
 	}
@@ -57,7 +55,7 @@ func (e *Executor) QuickNmapScan(target string) (*models.ToolOutput, error) {
 	
 	args := []string{
 		"-F",                    // fast mode - common ports only
-		"-oJ", tmpFile.Name(),   // output JSON to temp file (BEFORE target)
+		"-oX", tmpFile.Name(),   // output XML to temp file (more reliable than JSON)
 		cleanTarget,
 	}
 
@@ -66,9 +64,9 @@ func (e *Executor) QuickNmapScan(target string) (*models.ToolOutput, error) {
 		return output, err
 	}
 	
-	jsonData, readErr := ioutil.ReadFile(tmpFile.Name())
+	xmlData, readErr := ioutil.ReadFile(tmpFile.Name())
 	if readErr == nil {
-		output.Stdout = string(jsonData)
+		output.Stdout = string(xmlData)
 	}
 
 	return output, nil
