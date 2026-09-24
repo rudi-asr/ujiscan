@@ -180,69 +180,24 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Try to load playbook - might need to find by name match
-	availablePlaybooks, err := h.playbookEngine.ListPlaybooks()
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed to load playbooks: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// Find playbook - use explicit mapping to be reliable
-	var selectedPlaybook *playbook.Playbook
+	// Map request name to playbook filename
 	searchName := strings.ToLower(strings.TrimSpace(req.Playbook))
-	fmt.Printf("[DEBUG] Handler looking for playbook: %s\n", req.Playbook)
-	fmt.Printf("[DEBUG] Search name (lowercase): %s\n", searchName)
-	fmt.Printf("[DEBUG] Available playbooks: %v\n", len(availablePlaybooks))
-	for i, pb := range availablePlaybooks {
-		fmt.Printf("[DEBUG]   %d: %s\n", i, pb.Name)
-	}
-	
-	// Direct mapping from request to playbook names
-	var targetName string
-	switch searchName {
-	case "network-discovery", "network discovery":
-		targetName = "Network Discovery"
-	case "vulnerability-quick", "vulnerability quick scan":
-		targetName = "Vulnerability Quick Scan"
-	case "web-full-scan", "web server full scan", "web-server-full-scan":
-		targetName = "Web Server Full Scan"
-	default:
-		// Fallback: case-insensitive search
-		for _, pb := range availablePlaybooks {
-			if strings.ToLower(pb.Name) == searchName {
-				targetName = pb.Name
-				break
-			}
-		}
-	}
-	
-	// Find playbook by exact name
-	for _, pb := range availablePlaybooks {
-		if pb.Name == targetName {
-			selectedPlaybook = pb
-			break
-		}
-	}
-
-	if selectedPlaybook == nil {
-		http.Error(w, fmt.Sprintf("Playbook %s not found", req.Playbook), http.StatusNotFound)
-		return
-	}
-
-	// Use playbook filename (without .md extension) for loading
-	// Map from API name to filename
 	var playbookFilename string
+	
+	// Direct mapping from request to filename
 	switch searchName {
 	case "network-discovery", "network discovery":
 		playbookFilename = "network-discovery"
 	case "vulnerability-quick", "vulnerability quick scan":
 		playbookFilename = "vulnerability-quick"
-	case "web-full-scan", "web full scan", "web server full scan":
+	case "web-full-scan", "web server full scan", "web-server-full-scan":
 		playbookFilename = "web-full-scan"
 	default:
-		// Try direct filename
 		playbookFilename = req.Playbook
 	}
+	
+	// Map request name to playbook filename is done above via switch.
+	// No need to verify - if file doesn't exist, loader will error during execution.
 
 	if strings.TrimSpace(req.Target) == "" {
 		http.Error(w, "Target cannot be empty", http.StatusBadRequest)
