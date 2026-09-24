@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/rudi-asr/ujiscan/internal/api"
+	"github.com/rudi-asr/ujiscan/internal/auth"
 	"github.com/rudi-asr/ujiscan/internal/executor"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/registry"
@@ -56,6 +57,13 @@ func Run() error {
 	playbookLoader := playbook.NewPlaybookLoader(filepath.Join(projectRoot, "playbooks"))
 	playbookEngine := playbook.NewEngine(playbookLoader, scanExecutor, scanStore)
 
+	// Initialize authentication
+	userStore := auth.NewMemoryUserStore()
+	sessionStore := auth.NewMemorySessionStore()
+	tokenManager := auth.NewSimpleTokenManager("ujiscan-secret-key")
+	authService := auth.NewAuthService(userStore, sessionStore, tokenManager)
+	authHandler := auth.NewHandler(authService, userStore)
+
 	// Create API handler
 	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor, playbookEngine)
 
@@ -75,6 +83,17 @@ func Run() error {
 
 	// API routes
 	mux.HandleFunc("/api/status", handleStatus)
+
+	// Auth routes (no authentication required for login)
+	mux.HandleFunc("/auth/login", authHandler.HandleLogin)
+	mux.HandleFunc("/auth/logout", authHandler.HandleLogout)
+	mux.HandleFunc("/auth/me", authHandler.HandleMe)
+	mux.HandleFunc("/auth/change-password", authHandler.HandleChangePassword)
+
+	// User management routes (admin only)
+	mux.HandleFunc("/api/users", authHandler.HandleListUsers)
+	mux.HandleFunc("/api/users/create", authHandler.HandleCreateUser)
+
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
 	mux.HandleFunc("/api/playbooks", apiHandler.HandleListPlaybooks)
@@ -157,6 +176,10 @@ func Run() error {
 	// Start server
 	log.Printf("ujiscan server starting on http://localhost%s", Port)
 	log.Printf("API endpoints:")
+	log.Printf("  POST /auth/login         - User login")
+	log.Printf("  POST /auth/logout        - User logout")
+	log.Printf("  GET  /auth/me            - Get current user info")
+	log.Printf("  POST /auth/change-password - Change password")
 	log.Printf("  GET  /api/status         - Server health")
 	log.Printf("  GET  /api/tools          - List tools")
 	log.Printf("  GET  /api/stats          - Scan statistics")
@@ -167,11 +190,18 @@ func Run() error {
 	log.Printf("  DEL  /api/scan/{id}      - Delete scan")
 	log.Printf("  POST /api/scan/{id}/report           - Generate report (JSON)")
 	log.Printf("  GET  /api/scan/{id}/report/{format}  - Export report (html/md/json)")
+	log.Printf("  GET  /api/users          - List users (admin only)")
+	log.Printf("  POST /api/users/create   - Create user (admin only)")
 	log.Printf("CORS enabled for: http://localhost:8081, https://rudi-asr.github.io")
+	log.Printf("")
+	log.Printf("DEFAULT CREDENTIALS (CHANGE IN PRODUCTION):")
+	log.Printf("  Email: admin@ujiscan.local")
+	log.Printf("  Password: admin123")
 
-	// Wrap mux with CORS middleware
+	// Wrap mux with CORS and auth middleware
 	corsHandler := corsMiddleware(mux)
-	return http.ListenAndServe(Port, corsHandler)
+	authMiddleware := auth.AuthMiddleware(tokenManager)
+	return http.ListenAndServe(Port, authMiddleware(corsHandler))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
