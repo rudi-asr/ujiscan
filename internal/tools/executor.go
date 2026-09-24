@@ -86,8 +86,24 @@ func (e *Executor) RunTool(toolName string, args []string, phase models.PhaseTyp
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	// Run command
-	err := cmd.Run()
+	// Run command with timeout enforcement
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Run()
+	}()
+
+	// Wait for completion or timeout
+	var err error
+	select {
+	case err = <-done:
+		// Command finished
+	case <-ctx.Done():
+		// Context timeout - kill process
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+		err = ctx.Err()
+	}
 	output.EndedAt = time.Now()
 	output.Duration = int(output.EndedAt.Sub(output.StartedAt).Milliseconds())
 	output.Stdout = stdout.String()

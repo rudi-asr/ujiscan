@@ -90,7 +90,7 @@ function setupEventListeners() {
 
 // Poll for scan results
 async function pollScanResults(scanID) {
-    const maxAttempts = 120; // 2 minutes max
+    const maxAttempts = 60; // 60 seconds max (1 sec per attempt)
     let attempt = 0;
 
     const poll = async () => {
@@ -121,6 +121,11 @@ async function pollScanResults(scanID) {
             if (attempt < maxAttempts) {
                 attempt++;
                 setTimeout(poll, 1000); // Poll every 1 second
+            } else {
+                // Max timeout reached
+                addLog(`Scan timeout after ${maxAttempts} seconds`, 'error');
+                document.getElementById('status').innerHTML = 
+                    `<span class="status-timeout">TIMEOUT</span>`;
             }
         } catch (err) {
             addLog(`Poll error: ${err.message}`, 'error');
