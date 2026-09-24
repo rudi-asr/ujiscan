@@ -26,6 +26,8 @@ func (pl *PlaybookLoader) LoadPlaybook(name string) (*Playbook, error) {
 	// Find playbook file
 	path := filepath.Join(pl.playbooksDir, name+".md")
 	
+	fmt.Printf("Loading playbook from: %s\n", path)
+	
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read playbook file %s: %w", path, err)

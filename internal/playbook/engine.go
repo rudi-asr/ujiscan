@@ -28,10 +28,13 @@ func NewEngine(loader *PlaybookLoader, scanExec *executor.ScanExecutor, scanStor
 // ExecutePlaybook executes a playbook for a target
 func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target string) error {
 	// Load playbook
+	fmt.Printf("[playbook] Loading playbook: %s for scan %s\n", playbookName, scanID)
 	pb, err := e.loader.LoadPlaybook(playbookName)
 	if err != nil {
+		fmt.Printf("[playbook] Failed to load playbook: %v\n", err)
 		return fmt.Errorf("failed to load playbook: %w", err)
 	}
+	fmt.Printf("[playbook] Playbook loaded: %s (entry_phase=%s)\n", pb.Name, pb.EntryPhase)
 
 	// Create execution context
 	ctx := NewExecutionContext(playbookName, target, scanID)
@@ -53,9 +56,8 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 	}
 
 	// Store all results in scan
-	for _, result := range ctx.Results {
-		e.scanStore.AddResult(scanID, result)
-	}
+	// (Note: ExecuteTool already stores results, so context results are duplicate)
+	// Just mark as completed
 
 	// Mark as completed
 	e.scanStore.CompleteScan(scanID, nil)
@@ -66,26 +68,31 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 func (e *Engine) executePhase(pb *Playbook, ctx *ExecutionContext, phase PhaseType) error {
 	ctx.CurrentPhase = phase
 	steps := pb.GetPhaseSteps(phase)
+	
+	fmt.Printf("[%s] Executing phase %s with %d steps\n", ctx.PlaybookName, phase, len(steps))
 
 	for _, step := range steps {
-		// Check condition
-		if step.Condition != "" {
+		// Check condition - empty condition means "always execute"
+		if step.Condition != "" && step.Condition != "\"\"" {
 			if !e.evaluateCondition(ctx, step.Condition) {
-				fmt.Printf("Skipping step %s: condition not met (%s)\n", step.ID, step.Condition)
+				fmt.Printf("  [SKIP] Step %s: condition not met (%s)\n", step.ID, step.Condition)
 				continue
 			}
 		}
 
+		fmt.Printf("  [EXEC] Step %s: tool=%s\n", step.ID, step.Tool)
+
 		// Execute step
 		output, err := e.executeStep(ctx, &step)
 		if err != nil {
-			fmt.Printf("Error executing step %s: %v\n", step.ID, err)
+			fmt.Printf("  [ERROR] Step %s: %v\n", step.ID, err)
 			// Don't fail entire phase on single step error
 			continue
 		}
 
 		// Store result
 		if output != nil {
+			fmt.Printf("  [RESULT] Step %s: success=%v, exit_code=%d\n", step.ID, output.Success, output.ExitCode)
 			ctx.AddStepResult(step.ID, output)
 
 			// Update conditions based on result
@@ -119,13 +126,15 @@ func (e *Engine) executeStep(ctx *ExecutionContext, step *Step) (*models.ToolOut
 		args[i] = strings.ReplaceAll(arg, "{target}", ctx.Target)
 	}
 
+	fmt.Printf("    ExecuteTool: tool=%s, target=%s, args=%v\n", step.Tool, ctx.Target, args)
+
 	// Execute tool
 	output, err := e.scanExec.ExecuteTool(ctx.ScanID, step.Tool, args, models.PhaseEnum, ctx.Target)
 	if err != nil {
 		return nil, fmt.Errorf("tool execution failed: %w", err)
 	}
 
-	fmt.Printf("[%s] Executed step %s with tool %s\n", ctx.PlaybookName, step.ID, step.Tool)
+	fmt.Printf("    Tool completed: success=%v, stdout_len=%d\n", output.Success, len(output.Stdout))
 	return output, nil
 }
 

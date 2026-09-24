@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/rudi-asr/ujiscan/internal/executor"
+	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/store"
 	"github.com/rudi-asr/ujiscan/internal/tools"
@@ -179,9 +180,41 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if strings.TrimSpace(req.Playbook) == "" {
-		http.Error(w, "Playbook name cannot be empty", http.StatusBadRequest)
+	// Try to load playbook - might need to find by name match
+	availablePlaybooks, err := h.playbookEngine.ListPlaybooks()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to load playbooks: %v", err), http.StatusInternalServerError)
 		return
+	}
+
+	// Find playbook by name (case-insensitive, with variations)
+	var selectedPlaybook *playbook.Playbook
+	searchName := strings.ToLower(strings.TrimSpace(req.Playbook))
+	for _, pb := range availablePlaybooks {
+		if strings.ToLower(pb.Name) == searchName || strings.ToLower(strings.ReplaceAll(pb.Name, " ", "-")) == searchName {
+			selectedPlaybook = pb
+			break
+		}
+	}
+
+	if selectedPlaybook == nil {
+		http.Error(w, fmt.Sprintf("Playbook %s not found", req.Playbook), http.StatusNotFound)
+		return
+	}
+
+	// Use playbook filename (without .md extension) for loading
+	// Map from API name to filename
+	var playbookFilename string
+	switch searchName {
+	case "network-discovery", "network discovery":
+		playbookFilename = "network-discovery"
+	case "vulnerability-quick", "vulnerability quick scan":
+		playbookFilename = "vulnerability-quick"
+	case "web-full-scan", "web full scan", "web server full scan":
+		playbookFilename = "web-full-scan"
+	default:
+		// Try direct filename
+		playbookFilename = req.Playbook
 	}
 
 	if strings.TrimSpace(req.Target) == "" {
@@ -198,9 +231,12 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 
 	// Start playbook execution asynchronously
 	go func() {
-		err := h.playbookEngine.ExecutePlaybook(scan.ID, req.Playbook, req.Target)
+		fmt.Printf("[handler] Starting playbook execution: %s for scan %s\n", playbookFilename, scan.ID)
+		err := h.playbookEngine.ExecutePlaybook(scan.ID, playbookFilename, req.Target)
 		if err != nil {
-			fmt.Printf("Playbook execution error: %v\n", err)
+			fmt.Printf("[handler] Playbook execution error: %v\n", err)
+			// Update scan with error
+			h.scanStore.UpdateScanStatus(scan.ID, models.ScanStatusFailed)
 		}
 	}()
 
