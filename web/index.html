@@ -18,21 +18,33 @@ html {
 html[data-theme="dark"] {
     --bg: #0a0e27;
     --fg: #e0e0e0;
+    --bg-secondary: #1a1f3a;
     --border: #333;
     --accent: #00d4ff;
     --success: #00ff88;
     --error: #ff3333;
     --warning: #ffaa00;
+    --critical: #ff1744;
+    --high: #ff5722;
+    --medium: #ffc107;
+    --low: #4caf50;
+    --info: #2196f3;
 }
 
 html[data-theme="light"] {
     --bg: #ffffff;
     --fg: #000000;
+    --bg-secondary: #f5f5f5;
     --border: #cccccc;
     --accent: #0066ff;
     --success: #00aa00;
     --error: #cc0000;
     --warning: #ff6600;
+    --critical: #d32f2f;
+    --high: #e64a19;
+    --medium: #f57f17;
+    --low: #388e3c;
+    --info: #1976d2;
 }
 
 body {
@@ -43,7 +55,7 @@ body {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -67,18 +79,17 @@ header .subtitle {
     opacity: 0.8;
 }
 
-.github-info {
-    margin-top: 15px;
-}
-
-.github-info a {
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.95em;
-}
-
-.github-info a:hover {
-    text-decoration: underline;
+.theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1.2em;
 }
 
 .nav-tabs {
@@ -86,6 +97,7 @@ header .subtitle {
     gap: 10px;
     margin-bottom: 30px;
     border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
 }
 
 .nav-btn {
@@ -99,68 +111,58 @@ header .subtitle {
     transition: all 0.3s;
 }
 
-.nav-btn:hover {
-    color: var(--accent);
-}
-
 .nav-btn.active {
     color: var(--accent);
     border-bottom-color: var(--accent);
 }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-    animation: fadeIn 0.3s;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-.form-section, .logs-section, .results-section {
-    margin-bottom: 30px;
-}
-
-.form-section h2, .logs-section h3, .results-section h3 {
-    margin-bottom: 15px;
+.nav-btn:hover {
     color: var(--accent);
 }
 
-.form-group {
-    margin-bottom: 15px;
+.panel {
+    display: none;
 }
 
-.form-group label {
+.panel.active {
     display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
 }
 
-.form-group input,
-.form-group select {
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--fg);
+}
+
+input[type="text"],
+input[type="url"],
+select,
+textarea {
     width: 100%;
     padding: 10px;
-    background: var(--bg);
-    color: var(--fg);
+    background: var(--bg-secondary);
     border: 1px solid var(--border);
+    color: var(--fg);
     border-radius: 4px;
     font-size: 1em;
 }
 
-.form-group input:focus,
-.form-group select:focus {
+input[type="text"]:focus,
+input[type="url"]:focus,
+select:focus,
+textarea:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 5px var(--accent);
 }
 
-.btn-primary {
-    padding: 12px 30px;
+button {
+    padding: 10px 20px;
     background: var(--accent);
     color: var(--bg);
     border: none;
@@ -171,772 +173,640 @@ header .subtitle {
     transition: all 0.3s;
 }
 
-.btn-primary:hover {
+button:hover {
     opacity: 0.8;
     transform: translateY(-2px);
 }
 
-.btn-primary:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+button:active {
+    transform: translateY(0);
 }
 
-.alert {
-    padding: 12px 15px;
-    border-radius: 4px;
+.card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
     margin-bottom: 20px;
-    border-left: 4px solid;
 }
 
-.alert.info {
-    background: rgba(0, 212, 255, 0.1);
-    border-left-color: var(--accent);
-    color: var(--fg);
+.grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
 }
 
 .status-badge {
     display: inline-block;
-    padding: 8px 15px;
-    border-radius: 4px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85em;
     font-weight: 600;
-    margin-bottom: 15px;
 }
 
-.status-badge.idle {
-    background: rgba(200, 200, 200, 0.2);
-    color: #aaa;
+.status-badge.pending {
+    background: var(--warning);
+    color: var(--bg);
 }
 
 .status-badge.running {
-    background: rgba(0, 212, 255, 0.2);
-    color: var(--accent);
+    background: var(--info);
+    color: white;
 }
 
 .status-badge.completed {
-    background: rgba(0, 255, 136, 0.2);
-    color: var(--success);
+    background: var(--success);
+    color: var(--bg);
 }
 
-.status-badge.timeout {
-    background: rgba(255, 51, 51, 0.2);
-    color: var(--error);
+.status-badge.failed {
+    background: var(--error);
+    color: white;
 }
 
-.logs-container {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border);
+.severity-critical { color: var(--critical); font-weight: 600; }
+.severity-high { color: var(--high); font-weight: 600; }
+.severity-medium { color: var(--medium); font-weight: 600; }
+.severity-low { color: var(--low); font-weight: 600; }
+.severity-info { color: var(--info); font-weight: 600; }
+
+.finding-item {
+    background: var(--bg);
+    border-left: 4px solid var(--border);
+    padding: 12px;
+    margin-bottom: 10px;
     border-radius: 4px;
-    padding: 15px;
-    max-height: 200px;
-    overflow-y: auto;
-    font-family: 'Courier New', monospace;
+}
+
+.finding-item.critical { border-left-color: var(--critical); }
+.finding-item.high { border-left-color: var(--high); }
+.finding-item.medium { border-left-color: var(--medium); }
+.finding-item.low { border-left-color: var(--low); }
+.finding-item.info { border-left-color: var(--info); }
+
+.finding-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 8px;
+}
+
+.finding-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.finding-meta {
+    font-size: 0.85em;
+    color: var(--fg);
+    opacity: 0.7;
+    margin-bottom: 4px;
+}
+
+.finding-evidence {
     font-size: 0.9em;
+    padding: 8px;
+    background: var(--bg-secondary);
+    border-radius: 4px;
+    border-left: 2px solid var(--accent);
+    margin-top: 8px;
+    font-family: monospace;
 }
 
 .log-entry {
+    padding: 8px;
     margin-bottom: 8px;
-    color: #aaa;
-}
-
-.log-entry.error {
-    color: var(--error);
-}
-
-.log-entry.success {
-    color: var(--success);
-}
-
-.results-container {
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 20px;
-}
-
-.results-header {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--border);
-}
-
-.results-header h3 {
-    color: var(--accent);
-    margin-bottom: 10px;
-}
-
-.result-summary {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 15px;
-    font-size: 0.95em;
-}
-
-.result-summary-item {
-    padding: 10px;
-    background: rgba(0, 212, 255, 0.05);
-    border-left: 3px solid var(--accent);
-}
-
-.result-summary-item strong {
-    color: var(--accent);
-}
-
-.tool-result {
-    margin-bottom: 20px;
-    padding: 15px;
-    background: rgba(0, 0, 0, 0.5);
-    border-left: 3px solid var(--accent);
-    border-radius: 4px;
-}
-
-.tool-result h4 {
-    color: var(--accent);
-    margin-bottom: 10px;
-}
-
-.tool-result .result-details {
-    margin-bottom: 10px;
+    border-left: 2px solid var(--border);
+    padding-left: 12px;
     font-size: 0.9em;
+    font-family: monospace;
 }
 
-.tool-result .result-details p {
-    margin: 5px 0;
-}
+.log-entry.info { border-left-color: var(--info); }
+.log-entry.success { border-left-color: var(--success); }
+.log-entry.error { border-left-color: var(--error); }
+.log-entry.warning { border-left-color: var(--warning); }
 
-.result-details strong {
-    color: var(--accent);
-    min-width: 100px;
-    display: inline-block;
-}
-
-.tool-output {
-    background: rgba(0, 0, 0, 0.7);
-    border: 1px solid var(--border);
-    padding: 12px;
-    border-radius: 4px;
-    font-family: 'Courier New', monospace;
-    font-size: 0.85em;
-    max-height: 300px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.tool-output.empty {
-    color: #666;
-    font-style: italic;
-}
-
-.tools-grid {
+.severity-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
-.tool-card {
-    background: rgba(0, 212, 255, 0.05);
-    border: 1px solid var(--border);
+.severity-box {
     padding: 15px;
-    border-radius: 4px;
     text-align: center;
-}
-
-.tool-card h4 {
-    color: var(--accent);
-    margin-bottom: 10px;
-}
-
-.tool-card .status {
-    display: inline-block;
-    padding: 5px 10px;
-    border-radius: 3px;
-    font-size: 0.85em;
-    font-weight: 600;
-}
-
-.tool-card .status.available {
-    background: rgba(0, 255, 136, 0.2);
-    color: var(--success);
-}
-
-.tool-card .status.unavailable {
-    background: rgba(255, 51, 51, 0.2);
-    color: var(--error);
-}
-
-.playbooks-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
-}
-
-.playbook-card {
-    background: rgba(0, 212, 255, 0.05);
-    border: 1px solid var(--border);
-    padding: 15px;
     border-radius: 4px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
 }
 
-.playbook-card h4 {
-    color: var(--accent);
-    margin-bottom: 10px;
+.severity-box .count {
+    font-size: 2em;
+    font-weight: 700;
+    margin-bottom: 5px;
 }
 
-.playbook-card p {
+.severity-box .label {
     font-size: 0.9em;
-    color: rgba(224, 224, 224, 0.8);
-    margin-bottom: 10px;
-}
-
-.playbook-card .btn-small {
-    padding: 6px 12px;
-    background: var(--accent);
-    color: var(--bg);
-    border: none;
-    border-radius: 3px;
-    cursor: pointer;
-    font-size: 0.9em;
-}
-
-.playbook-card .btn-small:hover {
     opacity: 0.8;
 }
 
-.docs-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 15px;
+.severity-box.critical { background: rgba(255, 23, 68, 0.1); border-color: var(--critical); }
+.severity-box.high { background: rgba(255, 87, 34, 0.1); border-color: var(--high); }
+.severity-box.medium { background: rgba(255, 193, 7, 0.1); border-color: var(--medium); }
+.severity-box.low { background: rgba(76, 175, 80, 0.1); border-color: var(--low); }
+.severity-box.info { background: rgba(33, 150, 243, 0.1); border-color: var(--info); }
+
+.scope-list {
+    list-style: none;
 }
 
-.doc-card {
-    background: rgba(0, 212, 255, 0.05);
+.scope-list li {
+    padding: 8px;
+    background: var(--bg);
     border: 1px solid var(--border);
-    padding: 15px;
     border-radius: 4px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.doc-card h3 {
-    color: var(--accent);
-    margin-bottom: 10px;
+.scope-list li.allowed {
+    border-left: 3px solid var(--success);
 }
 
-.doc-card p {
-    font-size: 0.9em;
-    color: rgba(224, 224, 224, 0.8);
-    margin-bottom: 10px;
+.scope-list li.denied {
+    border-left: 3px solid var(--error);
 }
 
-.doc-card a {
-    color: var(--accent);
-    text-decoration: none;
+.remove-btn {
+    padding: 4px 8px;
+    font-size: 0.85em;
+    background: var(--error);
+    color: white;
 }
 
-.doc-card a:hover {
-    text-decoration: underline;
+.spinner {
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .loading {
     text-align: center;
-    color: #666;
-    padding: 20px;
+    padding: 40px;
 }
 
-footer {
+.mode-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.mode-btn {
+    padding: 15px;
     text-align: center;
-    margin-top: 40px;
-    padding-top: 20px;
-    border-top: 1px solid var(--border);
-    font-size: 0.9em;
-    color: #666;
-}
-
-footer a {
-    color: var(--accent);
-    text-decoration: none;
-}
-
-footer a:hover {
-    text-decoration: underline;
-}
-
-.theme-toggle {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: var(--accent);
-    color: var(--bg);
-    border: none;
-    padding: 10px 15px;
-    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--fg);
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1.2em;
-    width: 45px;
-    height: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     transition: all 0.3s;
 }
 
-.theme-toggle:hover {
-    opacity: 0.8;
-    transform: scale(1.05);
+.mode-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.mode-btn.selected {
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
+}
+
+.mode-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.mode-desc {
+    font-size: 0.8em;
+    opacity: 0.7;
 }
     </style>
 </head>
 <body>
-    <button class="theme-toggle" id="themeToggle">☀️</button>
-
+    <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
+    
     <div class="container">
         <header>
-            <h1>ujiscan</h1>
-            <p class="subtitle">Agentic Penetration Testing Platform</p>
+            <h1>☠️ ujiscan</h1>
+            <div class="subtitle">Agentic Penetration Testing Platform</div>
             <div class="github-info">
                 <a href="https://github.com/rudi-asr/ujiscan" target="_blank">🔗 View on GitHub</a>
             </div>
         </header>
 
-        <nav class="nav-tabs">
-            <button class="nav-btn active" data-tab="scan">Scan</button>
-            <button class="nav-btn" data-tab="tools">Tools</button>
-            <button class="nav-btn" data-tab="playbooks">Playbooks</button>
-            <button class="nav-btn" data-tab="docs">Documentation</button>
-        </nav>
+        <div class="nav-tabs">
+            <button class="nav-btn active" onclick="switchPanel('scan')">Scan</button>
+            <button class="nav-btn" onclick="switchPanel('scope')">Scope</button>
+            <button class="nav-btn" onclick="switchPanel('findings')">Findings</button>
+            <button class="nav-btn" onclick="switchPanel('logs')">Logs</button>
+            <button class="nav-btn" onclick="switchPanel('tools')">Tools</button>
+        </div>
 
-        <!-- SCAN TAB -->
-        <section id="scan-tab" class="tab-content active">
-            <div class="form-section">
+        <!-- SCAN PANEL -->
+        <div id="scan" class="panel active">
+            <div class="card">
                 <h2>Start Scan</h2>
-                <div class="alert info">
-                    <strong>Note:</strong> Backend server required at http://localhost:8081 to execute scans
+                <p style="opacity: 0.8; margin-bottom: 15px;">
+                    Note: Backend server required at http://localhost:8081 to execute scans
+                </p>
+
+                <div class="form-group">
+                    <label for="target">Target (e.g., 192.168.1.1 or example.com)</label>
+                    <input type="text" id="target" placeholder="example.com" value="127.0.0.1">
                 </div>
-                <form id="scanForm">
-                    <div class="form-group">
-                        <label>Target (e.g., 192.168.1.1 or example.com)</label>
-                        <input type="text" id="target" placeholder="127.0.0.1" required>
+
+                <div class="form-group">
+                    <label>Engagement Mode</label>
+                    <div class="mode-selector">
+                        <div class="mode-btn selected" data-mode="reconnaissance" onclick="selectMode('reconnaissance')">
+                            <div class="mode-title">🔍 Recon</div>
+                            <div class="mode-desc">Passive info gathering</div>
+                        </div>
+                        <div class="mode-btn" data-mode="hunt" onclick="selectMode('hunt')">
+                            <div class="mode-title">🎯 Hunt</div>
+                            <div class="mode-desc">Vuln scanning</div>
+                        </div>
+                        <div class="mode-btn" data-mode="red-team" onclick="selectMode('red-team')">
+                            <div class="mode-title">⚔️ Red Team</div>
+                            <div class="mode-desc">Full assessment</div>
+                        </div>
+                        <div class="mode-btn" data-mode="network-scan" onclick="selectMode('network-scan')">
+                            <div class="mode-title">🌐 Network</div>
+                            <div class="mode-desc">Network-only</div>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Scan Type</label>
-                        <select id="scanType">
-                            <option value="regular">Regular Scan (nmap + nuclei)</option>
-                            <option value="playbook">Playbook Scan (guided)</option>
-                            <option value="agentic">Agentic Scan (AI-driven)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" id="playbookGroup" style="display:none;">
-                        <label>Playbook</label>
-                        <select id="playbook">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-primary">Start Scan</button>
-                </form>
+                </div>
+
+                <div class="form-group">
+                    <label for="scanType">Scan Type (Legacy)</label>
+                    <select id="scanType">
+                        <option value="regular">Regular Scan (nmap + nuclei)</option>
+                        <option value="quick">Quick Scan (nmap only)</option>
+                        <option value="full">Full Scan (all tools)</option>
+                    </select>
+                </div>
+
+                <button onclick="startScan()">Start Scan</button>
             </div>
 
-            <div class="logs-section">
-                <h3>Scan Status</h3>
-                <div class="status-badge idle" id="statusBadge">IDLE</div>
-                <div class="logs-container" id="logsContainer">
-                    <div class="log-entry">[Ready for scan]</div>
+            <div class="card">
+                <h2>Scan Status</h2>
+                <div id="scanStatus" style="min-height: 150px;">
+                    <div style="opacity: 0.7;">No active scan</div>
                 </div>
             </div>
 
-            <div class="results-section">
-                <h3>Results</h3>
-                <div id="resultsContainer" class="results-container">
-                    <p>No scan results yet</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- TOOLS TAB -->
-        <section id="tools-tab" class="tab-content">
-            <h2>Available Tools</h2>
-            <div class="alert info">
-                <strong>Note:</strong> Tools loaded from running backend server
-            </div>
-            <div id="toolsList" class="tools-grid">
-                <div class="loading">Loading tools from server...</div>
-            </div>
-        </section>
-
-        <!-- PLAYBOOKS TAB -->
-        <section id="playbooks-tab" class="tab-content">
-            <h2>Available Playbooks</h2>
-            <div id="playbooksList" class="playbooks-list">
-                <div class="loading">Loading playbooks from GitHub...</div>
-            </div>
-        </section>
-
-        <!-- DOCUMENTATION TAB -->
-        <section id="docs-tab" class="tab-content">
-            <h2>Documentation</h2>
-            <div class="docs-grid">
-                <div class="doc-card">
-                    <h3>📖 README</h3>
-                    <p>Quick start guide and architecture overview</p>
-                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/README.md" target="_blank">View →</a>
-                </div>
-                <div class="doc-card">
-                    <h3>🔧 DEVELOPMENT</h3>
-                    <p>Development setup and architecture details</p>
-                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/DEVELOPMENT.md" target="_blank">View →</a>
-                </div>
-                <div class="doc-card">
-                    <h3>📝 HANDOFF</h3>
-                    <p>LLM handoff documentation</p>
-                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/HANDOFF_LLM.md" target="_blank">View →</a>
-                </div>
-            </div>
-        </section>
-
-        <footer>
-            <p>ujiscan v0.1.0 | Offensive Security | <a href="https://github.com/rudi-asr/ujiscan" target="_blank">GitHub</a></p>
-        </footer>
-    </div>
-
-    <script>
-// ============================================================================
-// UJISCAN DASHBOARD - MAIN APPLICATION LOGIC
-// ============================================================================
-
-const SERVER = 'http://localhost:8081';
-const GITHUB_API = 'https://api.github.com/repos/rudi-asr/ujiscan';
-const GITHUB_RAW = 'https://raw.githubusercontent.com/rudi-asr/ujiscan/main';
-
-let currentScanId = null;
-let pollingInterval = null;
-
-// ============================================================================
-// UTILITY FUNCTIONS
-// ============================================================================
-
-function formatDate(dateString) {
-    if (!dateString) return 'N/A';
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) return 'N/A';
-        return date.toLocaleString();
-    } catch (e) {
-        console.error('Date parse error:', dateString, e);
-        return 'N/A';
-    }
-}
-
-function formatDuration(startedAt, endedAt) {
-    if (!startedAt || !endedAt) return 'N/A';
-    try {
-        const start = new Date(startedAt);
-        const end = new Date(endedAt);
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'N/A';
-        
-        const seconds = Math.round((end - start) / 1000);
-        return seconds > 0 ? `${seconds}s` : 'N/A';
-    } catch (e) {
-        console.error('Duration calc error:', e);
-        return 'N/A';
-    }
-}
-
-// ============================================================================
-// DOM MANIPULATION
-// ============================================================================
-
-function updateStatusBadge(status) {
-    const badge = document.getElementById('statusBadge');
-    badge.className = `status-badge ${status.toLowerCase()}`;
-    badge.textContent = status.toUpperCase();
-}
-
-function addLogEntry(message, type = 'info') {
-    const logsContainer = document.getElementById('logsContainer');
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${type}`;
-    entry.textContent = message;
-    logsContainer.appendChild(entry);
-    logsContainer.scrollTop = logsContainer.scrollHeight;
-}
-
-function displayResults(scan) {
-    const resultsContainer = document.getElementById('resultsContainer');
-    if (!scan || !scan.results || scan.results.length === 0) {
-        resultsContainer.innerHTML = '<p>No scan results yet</p>';
-        return;
-    }
-
-    let html = `
-        <div class="results-header">
-            <h3>Scan Results</h3>
-            <div class="result-summary">
-                <div class="result-summary-item">
-                    <strong>Target:</strong> ${scan.target}
-                </div>
-                <div class="result-summary-item">
-                    <strong>Started:</strong> ${formatDate(scan.started_at)}
-                </div>
-                <div class="result-summary-item">
-                    <strong>Duration:</strong> ${formatDuration(scan.started_at, scan.ended_at)}
-                </div>
-                <div class="result-summary-item">
-                    <strong>Status:</strong> ${scan.status}
+            <div class="card">
+                <h2>Results</h2>
+                <div id="scanResults" style="min-height: 200px;">
+                    <div style="opacity: 0.7;">Results will appear here</div>
                 </div>
             </div>
         </div>
-    `;
 
-    scan.results.forEach((result, idx) => {
-        html += `
-            <div class="tool-result">
-                <h4>${idx + 1}. ${result.tool_name}</h4>
-                <div class="result-details">
-                    <p><strong>Exit Code:</strong> ${result.exit_code}</p>
-                    <p><strong>Command:</strong> <code>${escapeHtml(result.command)}</code></p>
-                    ${result.args ? `<p><strong>Args:</strong> <code>${escapeHtml(result.args)}</code></p>` : ''}
+        <!-- SCOPE PANEL -->
+        <div id="scope" class="panel">
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Add Scope Pattern</h2>
+                    <div class="form-group">
+                        <label for="scopePattern">Pattern (domain, *.domain, CIDR, domain:port)</label>
+                        <input type="text" id="scopePattern" placeholder="*.example.com" value="example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="scopeType">Type</label>
+                        <select id="scopeType">
+                            <option value="allow">Allow (Whitelist)</option>
+                            <option value="deny">Deny (Blacklist)</option>
+                        </select>
+                    </div>
+                    <button onclick="addScopePattern()">Add Pattern</button>
                 </div>
-        `;
 
-        const output = result.stdout || result.stderr || '';
-        if (output.trim()) {
-            html += `<div class="tool-output">${escapeHtml(output)}</div>`;
-        } else {
-            html += `<div class="tool-output empty">[No output]</div>`;
-        }
+                <div class="card">
+                    <h2>Scope Configuration</h2>
+                    <div class="form-group">
+                        <label for="scopeMode">Scope Mode</label>
+                        <select id="scopeMode">
+                            <option value="strict">Strict (Whitelist Only)</option>
+                            <option value="permissive">Permissive (Allow by Default)</option>
+                        </select>
+                    </div>
+                    <button onclick="applyScopeMode()">Apply</button>
+                </div>
+            </div>
 
-        html += `</div>`;
-    });
+            <div class="card">
+                <h2>Current Scope</h2>
+                <div id="scopeList" style="min-height: 200px;">
+                    <ul class="scope-list">
+                        <li class="allowed">
+                            <span>example.com</span>
+                            <button class="remove-btn" onclick="removeScope('example.com')">Remove</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-    resultsContainer.innerHTML = html;
+        <!-- FINDINGS PANEL -->
+        <div id="findings" class="panel">
+            <div class="card">
+                <h2>Findings Summary</h2>
+                <div class="severity-summary" id="severitySummary">
+                    <div class="severity-box critical">
+                        <div class="count">0</div>
+                        <div class="label">🔴 Critical</div>
+                    </div>
+                    <div class="severity-box high">
+                        <div class="count">0</div>
+                        <div class="label">🟠 High</div>
+                    </div>
+                    <div class="severity-box medium">
+                        <div class="count">0</div>
+                        <div class="label">🟡 Medium</div>
+                    </div>
+                    <div class="severity-box low">
+                        <div class="count">0</div>
+                        <div class="label">🟢 Low</div>
+                    </div>
+                    <div class="severity-box info">
+                        <div class="count">0</div>
+                        <div class="label">ℹ️ Info</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Findings</h2>
+                <div id="findingsList" style="min-height: 300px;">
+                    <div style="opacity: 0.7;">No findings yet. Run a scan to populate findings.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGS PANEL -->
+        <div id="logs" class="panel">
+            <div class="card">
+                <h2>Execution Log</h2>
+                <button onclick="clearLogs()" style="margin-bottom: 15px;">Clear Logs</button>
+                <div id="logsList" style="max-height: 500px; overflow-y: auto; background: var(--bg); padding: 10px; border-radius: 4px;">
+                    <div style="opacity: 0.7;">Logs will appear here</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOOLS PANEL -->
+        <div id="tools" class="panel">
+            <div class="card">
+                <h2>Available Tools</h2>
+                <div id="toolsList" style="min-height: 300px;">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading tools...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+const API_BASE = 'http://localhost:8081';
+let currentScanId = null;
+let currentMode = 'reconnaissance';
+let findings = [];
+let logs = [];
+
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
 }
 
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// ============================================================================
-// API CALLS
-// ============================================================================
-
-async function startScan(target, scanType, playbook = null) {
-    try {
-        const payload = { target, scan_type: scanType };
-        if (playbook) payload.playbook = playbook;
-
-        const response = await fetch(`${SERVER}/api/scan`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(10000)
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Start scan error:', error);
-        addLogEntry(`Error: ${error.message}`, 'error');
-        throw error;
+function switchPanel(panelName) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(panelName).classList.add('active');
+    event.target.classList.add('active');
+    
+    if (panelName === 'tools') {
+        loadTools();
     }
 }
 
-async function getScan(scanId) {
-    try {
-        const response = await fetch(`${SERVER}/api/scan/${scanId}`, {
-            signal: AbortSignal.timeout(5000)
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Get scan error:', error);
-        throw error;
-    }
+function selectMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('selected'));
+    event.target.closest('.mode-btn').classList.add('selected');
 }
 
-async function getTools() {
-    try {
-        const response = await fetch(`${SERVER}/api/tools`, {
-            signal: AbortSignal.timeout(5000)
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Get tools error:', error);
-        return [];
-    }
-}
-
-async function getPlaybooks() {
-    try {
-        const response = await fetch(`${SERVER}/api/playbooks`, {
-            signal: AbortSignal.timeout(5000)
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.json();
-    } catch (error) {
-        console.error('Get playbooks error:', error);
-        return [];
-    }
-}
-
-// ============================================================================
-// POLLING
-// ============================================================================
-
-function startPolling(scanId) {
-    currentScanId = scanId;
-    let attempts = 0;
-    const maxAttempts = 120; // 2 minutes with 1s interval
-
-    pollingInterval = setInterval(async () => {
-        attempts++;
-
-        try {
-            const scan = await getScan(scanId);
-            addLogEntry(`[${new Date().toLocaleTimeString()}] Status: ${scan.status}`);
-            updateStatusBadge(scan.status);
-
-            if (scan.status === 'completed' || scan.status === 'failed') {
-                clearInterval(pollingInterval);
-                displayResults(scan);
-                return;
-            }
-
-            if (attempts >= maxAttempts) {
-                clearInterval(pollingInterval);
-                updateStatusBadge('TIMEOUT');
-                addLogEntry('Scan timeout after 2 minutes', 'error');
-            }
-        } catch (error) {
-            console.error('Polling error:', error);
-        }
-    }, 1000);
-}
-
-// ============================================================================
-// EVENT HANDLERS
-// ============================================================================
-
-document.getElementById('scanForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const target = document.getElementById('target').value.trim();
-    const scanType = document.getElementById('scanType').value;
-    const playbook = document.getElementById('playbook').value;
-
+function startScan() {
+    const target = document.getElementById('target').value;
     if (!target) {
         alert('Please enter a target');
         return;
     }
 
-    document.getElementById('logsContainer').innerHTML = '';
-    addLogEntry(`[${new Date().toLocaleTimeString()}] Starting ${scanType} scan for ${target}...`);
-    updateStatusBadge('RUNNING');
+    addLog(`Starting ${currentMode} scan for ${target}...`, 'info');
+    
+    const payload = {
+        target: target,
+        mode: currentMode,
+        type: 'playbook'
+    };
 
-    try {
-        const result = await startScan(target, scanType, playbook || null);
-        currentScanId = result.id;
-        addLogEntry(`[${new Date().toLocaleTimeString()}] Scan started: ${result.id}`);
-        startPolling(result.id);
-    } catch (error) {
-        updateStatusBadge('FAILED');
-        addLogEntry(`Scan failed: ${error.message}`, 'error');
-    }
-});
-
-document.querySelectorAll('.nav-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        e.target.classList.add('active');
-        document.getElementById(`${e.target.dataset.tab}-tab`).classList.add('active');
-
-        if (e.target.dataset.tab === 'tools') loadTools();
-        if (e.target.dataset.tab === 'playbooks') loadPlaybooksTab();
+    fetch(`${API_BASE}/api/scan/playbook`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.scan_id) {
+            currentScanId = data.scan_id;
+            addLog(`Scan started: ${data.scan_id}`, 'success');
+            pollScanStatus();
+        } else {
+            addLog(`Error: ${data.error || 'Unknown error'}`, 'error');
+        }
+    })
+    .catch(err => {
+        addLog(`Error starting scan: ${err.message}`, 'error');
     });
-});
-
-// ============================================================================
-// TAB LOADERS
-// ============================================================================
-
-async function loadTools() {
-    const toolsList = document.getElementById('toolsList');
-    toolsList.innerHTML = '<div class="loading">Loading tools...</div>';
-
-    const tools = await getTools();
-    if (!tools || tools.length === 0) {
-        toolsList.innerHTML = '<div class="alert info">⚠️ Cannot connect to backend server<br>Ensure server is running: ./ujiscan</div>';
-        return;
-    }
-
-    toolsList.innerHTML = tools.map(tool => `
-        <div class="tool-card">
-            <h4>${tool.name}</h4>
-            <p>${tool.description || ''}</p>
-            <span class="status available">✓ Available</span>
-        </div>
-    `).join('');
 }
 
-async function loadPlaybooksTab() {
-    const playbooksList = document.getElementById('playbooksList');
-    playbooksList.innerHTML = '<div class="loading">Loading playbooks...</div>';
+function pollScanStatus() {
+    if (!currentScanId) return;
 
-    const playbooks = await getPlaybooks();
-    if (!playbooks || playbooks.length === 0) {
-        playbooksList.innerHTML = '<div class="alert info">No playbooks available</div>';
-        return;
-    }
-
-    playbooksList.innerHTML = playbooks.map(pb => `
-        <div class="playbook-card">
-            <h4>${pb.name}</h4>
-            <p>${pb.description || ''}</p>
-            <button class="btn-small" onclick="alert('Playbook: ' + '${pb.name}')">View Details →</button>
-        </div>
-    `).join('');
+    fetch(`${API_BASE}/api/scan/${currentScanId}`)
+        .then(r => r.json())
+        .then(data => {
+            updateScanStatus(data);
+            
+            if (data.status === 'running') {
+                setTimeout(pollScanStatus, 1000);
+            } else if (data.status === 'completed') {
+                addLog('Scan completed', 'success');
+                displayResults(data);
+            } else if (data.status === 'failed') {
+                addLog(`Scan failed: ${data.error}`, 'error');
+            }
+        })
+        .catch(err => {
+            addLog(`Polling error: ${err.message}`, 'error');
+        });
 }
 
-// ============================================================================
-// THEME TOGGLE
-// ============================================================================
+function updateScanStatus(scan) {
+    const status = document.getElementById('scanStatus');
+    const badge = `<span class="status-badge ${scan.status}">${scan.status.toUpperCase()}</span>`;
+    
+    const info = `
+        <p>${badge}</p>
+        <p><strong>Target:</strong> ${scan.target}</p>
+        <p><strong>Started:</strong> ${new Date(scan.started_at).toLocaleTimeString()}</p>
+        <p><strong>Status:</strong> ${scan.status}</p>
+    `;
+    
+    status.innerHTML = info;
+}
 
-const html = document.documentElement;
-const themeToggle = document.getElementById('themeToggle');
-
-// Initialize theme
-const savedTheme = localStorage.getItem('theme') || 'dark';
-html.setAttribute('data-theme', savedTheme);
-themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '☾';
-
-themeToggle.addEventListener('click', () => {
-    const currentTheme = html.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
-    themeToggle.textContent = newTheme === 'dark' ? '☀️' : '☾';
-});
-
-// ============================================================================
-// PLAYBOOK SELECTOR
-// ============================================================================
-
-document.getElementById('scanType').addEventListener('change', async (e) => {
-    const playbookGroup = document.getElementById('playbookGroup');
-    if (e.target.value === 'playbook') {
-        playbookGroup.style.display = 'block';
-        const playbooks = await getPlaybooks();
-        const select = document.getElementById('playbook');
-        select.innerHTML = playbooks.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+function displayResults(scan) {
+    const results = document.getElementById('scanResults');
+    let html = '<h3>Tool Results</h3>';
+    
+    if (scan.results && scan.results.length > 0) {
+        scan.results.forEach((result, i) => {
+            html += `
+                <div class="card" style="margin-bottom: 10px;">
+                    <h4>${i + 1}. ${result.tool_name}</h4>
+                    <p><strong>Exit Code:</strong> ${result.exit_code}</p>
+                    <p><strong>Duration:</strong> ${(result.duration_ms / 1000).toFixed(1)}s</p>
+                    <p><strong>Command:</strong> ${result.command}</p>
+                    <p><strong>Args:</strong> ${result.args.join(', ')}</p>
+                    ${result.stdout ? `<pre style="background: var(--bg); padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">${result.stdout.substring(0, 500)}</pre>` : ''}
+                </div>
+            `;
+        });
     } else {
-        playbookGroup.style.display = 'none';
+        html += '<p style="opacity: 0.7;">No results available</p>';
     }
-});
+    
+    results.innerHTML = html;
+}
 
-console.log('Dashboard loaded. Server: ' + SERVER);
+function loadTools() {
+    fetch(`${API_BASE}/api/tools`)
+        .then(r => r.json())
+        .then(tools => {
+            const list = document.getElementById('toolsList');
+            if (tools && tools.length > 0) {
+                let html = '<table style="width: 100%; border-collapse: collapse;">';
+                html += '<tr style="border-bottom: 1px solid var(--border);"><th style="text-align: left; padding: 10px;">Name</th><th>Description</th><th>Status</th></tr>';
+                
+                tools.forEach(tool => {
+                    const status = tool.available ? '✅ Available' : '❌ Not Found';
+                    html += `
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 10px; font-weight: 600;">${tool.name}</td>
+                            <td style="padding: 10px;">${tool.description}</td>
+                            <td style="padding: 10px;">${status}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+                list.innerHTML = html;
+            } else {
+                list.innerHTML = '<p style="opacity: 0.7;">No tools available</p>';
+            }
+        })
+        .catch(err => {
+            document.getElementById('toolsList').innerHTML = `<p style="color: var(--error);">Error loading tools: ${err.message}</p>`;
+        });
+}
+
+function addLog(message, type = 'info') {
+    const timestamp = new Date().toLocaleTimeString();
+    const entry = `[${timestamp}] ${message}`;
+    logs.push({ message: entry, type });
+    
+    const logsList = document.getElementById('logsList');
+    const div = document.createElement('div');
+    div.className = `log-entry ${type}`;
+    div.textContent = entry;
+    logsList.appendChild(div);
+    logsList.scrollTop = logsList.scrollHeight;
+}
+
+function clearLogs() {
+    logs = [];
+    document.getElementById('logsList').innerHTML = '<div style="opacity: 0.7;">Logs cleared</div>';
+}
+
+function addScopePattern() {
+    const pattern = document.getElementById('scopePattern').value;
+    const type = document.getElementById('scopeType').value;
+    
+    if (!pattern) {
+        alert('Please enter a pattern');
+        return;
+    }
+    
+    addLog(`Added ${type} pattern: ${pattern}`, 'info');
+    addLog('Note: Scope patterns not persisted yet', 'warning');
+}
+
+function applyScopeMode() {
+    const mode = document.getElementById('scopeMode').value;
+    addLog(`Scope mode set to: ${mode}`, 'info');
+    addLog('Note: Scope mode not persisted yet', 'warning');
+}
+
+function removeScope(pattern) {
+    addLog(`Removed scope pattern: ${pattern}`, 'info');
+}
+
+// Initialize
+window.addEventListener('load', () => {
+    const theme = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+});
     </script>
 </body>
 </html>
