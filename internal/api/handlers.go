@@ -9,6 +9,7 @@ import (
 	"github.com/rudi-asr/ujiscan/internal/executor"
 	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
+	"github.com/rudi-asr/ujiscan/internal/reports"
 	"github.com/rudi-asr/ujiscan/internal/store"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
@@ -183,7 +184,7 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 	// Map request name to playbook filename
 	searchName := strings.ToLower(strings.TrimSpace(req.Playbook))
 	var playbookFilename string
-	
+
 	// Direct mapping from request to filename
 	switch searchName {
 	case "network-discovery", "network discovery":
@@ -195,7 +196,7 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 	default:
 		playbookFilename = req.Playbook
 	}
-	
+
 	// Map request name to playbook filename is done above via switch.
 	// No need to verify - if file doesn't exist, loader will error during execution.
 
@@ -293,7 +294,7 @@ func (h *Handler) HandleAgenticPlaybookScan(w http.ResponseWriter, r *http.Reque
 	// Map request name to playbook filename
 	searchName := strings.ToLower(strings.TrimSpace(req.Playbook))
 	var playbookFilename string
-	
+
 	// Direct mapping from request to filename
 	switch searchName {
 	case "network-discovery", "network discovery":
@@ -347,4 +348,165 @@ func (h *Handler) HandleAgenticPlaybookScan(w http.ResponseWriter, r *http.Reque
 		Target: scan.Target,
 		Status: string(scan.Status),
 	})
+}
+
+// HandleGenerateReport generates a report for a scan
+func (h *Handler) HandleGenerateReport(w http.ResponseWriter, r *http.Request, scanID string) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get scan
+	scan, err := h.scanStore.GetScan(scanID)
+	if err != nil {
+		http.Error(w, "Scan not found", http.StatusNotFound)
+		return
+	}
+
+	// Parse request for report options
+	var req struct {
+		ClientName string `json:"client_name"`
+		Format     string `json:"format"` // json, html, markdown
+	}
+	json.NewDecoder(r.Body).Decode(&req)
+
+	if req.ClientName == "" {
+		req.ClientName = "Assessment Client"
+	}
+	if req.Format == "" {
+		req.Format = "json"
+	}
+
+	// Convert scan results to findings
+	findings := h.scanResultsToFindings(scan.Results)
+
+	// Generate report
+	gen := reports.NewGenerator()
+	report := gen.GenerateReport(
+		req.ClientName,
+		scan.Target,
+		[]string{scan.Target},
+		"security-assessment",
+		scanID,
+		findings,
+		0, // duration (can be enhanced)
+		scan.StartedAt,
+	)
+
+	// Export in requested format
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(report)
+}
+
+// HandleExportReport exports a report in specific format
+func (h *Handler) HandleExportReport(w http.ResponseWriter, r *http.Request, scanID, format string) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Get scan
+	scan, err := h.scanStore.GetScan(scanID)
+	if err != nil {
+		http.Error(w, "Scan not found", http.StatusNotFound)
+		return
+	}
+
+	// Convert scan results to findings
+	findings := h.scanResultsToFindings(scan.Results)
+
+	// Generate report
+	gen := reports.NewGenerator()
+	report := gen.GenerateReport(
+		"Assessment Client",
+		scan.Target,
+		[]string{scan.Target},
+		"security-assessment",
+		scanID,
+		findings,
+		0,
+		scan.StartedAt,
+	)
+
+	// Export in requested format
+	switch format {
+	case "html":
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="report_%s.html"`, scanID))
+		renderer := reports.NewHTMLRenderer("", "#667eea")
+		htmlContent := renderer.Render(report)
+		w.Write([]byte(htmlContent))
+
+	case "markdown", "md":
+		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="report_%s.md"`, scanID))
+		mdExp := reports.NewMarkdownExporter()
+		mdContent := mdExp.Export(report, "")
+		w.Write([]byte(mdContent))
+
+	case "json":
+		fallthrough
+	default:
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="report_%s.json"`, scanID))
+		jsonExp := reports.NewJSONExporter()
+		jsonContent, _ := jsonExp.ExportString(report)
+		w.Write([]byte(jsonContent))
+	}
+}
+
+// scanResultsToFindings converts scan results to report findings
+func (h *Handler) scanResultsToFindings(results []models.ToolOutput) []*reports.Finding {
+	findings := make([]*reports.Finding, 0, len(results))
+
+	for i, result := range results {
+		finding := &reports.Finding{
+			ID:          fmt.Sprintf("F%d", i+1),
+			Type:        "vulnerability",
+			Category:    result.ToolName,
+			Title:       fmt.Sprintf("%s finding from %s", result.ToolName, result.Target),
+			Severity:    "medium", // TODO: parse from tool output
+			CVSSV3:      "7.5",     // placeholder
+			CWE:         "CWE-Unknown",
+			OWASP:       "A01:2021 – Broken Access Control",
+			Target:      result.Target,
+			Parameter:   "",
+			Description: result.Stdout,
+			Impact:      fmt.Sprintf("Potential issue detected by %s", result.ToolName),
+			Evidence: reports.FindingEvidence{
+				Tool:            result.ToolName,
+				ResponseSnippet: result.Stdout,
+			},
+			Remediation: reports.RemediationSteps{
+				Priority: "medium",
+				Steps: []string{
+					fmt.Sprintf("Review output from %s", result.ToolName),
+					"Investigate finding and verify impact",
+					"Re-test after remediation",
+				},
+				EstimatedEffort: "2-3 hours",
+				Verification:    "Run tool again and verify fix",
+			},
+		}
+		findings = append(findings, finding)
+	}
+
+	return findings
+}
+
+// getPriority maps severity to remediation priority
+func (h *Handler) getPriority(severity string) string {
+	switch severity {
+	case "critical":
+		return "immediate"
+	case "high":
+		return "high"
+	case "medium":
+		return "medium"
+	case "low":
+		return "low"
+	default:
+		return "low"
+	}
 }

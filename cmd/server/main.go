@@ -130,6 +130,20 @@ func Run() error {
 
 		scanID := parts[0]
 
+		// Check if this is a report request
+		if len(parts) > 1 && parts[1] == "report" {
+			// /api/scan/{id}/report or /api/scan/{id}/report/{format}
+			if len(parts) > 2 {
+				// Export in specific format: /api/scan/{id}/report/{format}
+				format := parts[2]
+				apiHandler.HandleExportReport(w, r, scanID, format)
+			} else {
+				// Generate report: /api/scan/{id}/report
+				apiHandler.HandleGenerateReport(w, r, scanID)
+			}
+			return
+		}
+
 		switch r.Method {
 		case http.MethodGet:
 			apiHandler.HandleGetScan(w, r, scanID)
@@ -151,6 +165,8 @@ func Run() error {
 	log.Printf("  POST /api/scan/playbook  - Start playbook scan")
 	log.Printf("  GET  /api/scan/{id}      - Get scan details")
 	log.Printf("  DEL  /api/scan/{id}      - Delete scan")
+	log.Printf("  POST /api/scan/{id}/report           - Generate report (JSON)")
+	log.Printf("  GET  /api/scan/{id}/report/{format}  - Export report (html/md/json)")
 	log.Printf("CORS enabled for: http://localhost:8081, https://rudi-asr.github.io")
 
 	// Wrap mux with CORS middleware
