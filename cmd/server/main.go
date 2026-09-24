@@ -10,6 +10,7 @@ import (
 
 	"github.com/rudi-asr/ujiscan/internal/api"
 	"github.com/rudi-asr/ujiscan/internal/executor"
+	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/store"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
@@ -31,8 +32,12 @@ func Run() error {
 	toolExecutor.InitializeDefaultTools()
 	scanExecutor := executor.NewScanExecutor(scanStore, toolExecutor)
 
+	// Initialize playbook engine
+	playbookLoader := playbook.NewPlaybookLoader(filepath.Join(projectRoot, "playbooks"))
+	playbookEngine := playbook.NewEngine(playbookLoader, scanExecutor, scanStore)
+
 	// Create API handler
-	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor)
+	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor, playbookEngine)
 
 	// Routes
 	mux := http.NewServeMux()
@@ -52,11 +57,21 @@ func Run() error {
 	mux.HandleFunc("/api/status", handleStatus)
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
+	mux.HandleFunc("/api/playbooks", apiHandler.HandleListPlaybooks)
 	
 	// Scan API routes with custom handler
 	mux.HandleFunc("/api/scan", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			apiHandler.HandleStartScan(w, r)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Playbook scan endpoint
+	mux.HandleFunc("/api/scan/playbook", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			apiHandler.HandlePlaybookScan(w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
@@ -86,12 +101,14 @@ func Run() error {
 	// Start server
 	log.Printf("ujiscan server starting on http://localhost%s", Port)
 	log.Printf("API endpoints:")
-	log.Printf("  GET  /api/status       - Server health")
-	log.Printf("  GET  /api/tools        - List tools")
-	log.Printf("  GET  /api/stats        - Scan statistics")
-	log.Printf("  POST /api/scan         - Start scan")
-	log.Printf("  GET  /api/scan/{id}    - Get scan details")
-	log.Printf("  DEL  /api/scan/{id}    - Delete scan")
+	log.Printf("  GET  /api/status         - Server health")
+	log.Printf("  GET  /api/tools          - List tools")
+	log.Printf("  GET  /api/stats          - Scan statistics")
+	log.Printf("  GET  /api/playbooks      - List playbooks")
+	log.Printf("  POST /api/scan           - Start scan")
+	log.Printf("  POST /api/scan/playbook  - Start playbook scan")
+	log.Printf("  GET  /api/scan/{id}      - Get scan details")
+	log.Printf("  DEL  /api/scan/{id}      - Delete scan")
 
 	return http.ListenAndServe(Port, mux)
 }
