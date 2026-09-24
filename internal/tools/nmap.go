@@ -9,12 +9,15 @@ import (
 
 // ScanWithNmap executes nmap with full port scan and version detection
 func (e *Executor) ScanWithNmap(target string) (*models.ToolOutput, error) {
+	// Clean target: remove protocol/path, keep only domain/IP
+	cleanTarget := CleanTarget(target)
+	
 	// Construct nmap arguments for JSON output
 	args := []string{
 		"-sV",      // version detection
 		"-p-",      // all ports
 		"-oJ", "-", // output JSON to stdout
-		target,
+		cleanTarget,
 	}
 
 	output, err := e.RunTool("nmap", args, models.PhaseRecon, target)
@@ -46,10 +49,11 @@ func parseNmapJSON(jsonOutput string) (interface{}, error) {
 
 // QuickNmapScan runs a fast nmap scan (common ports only)
 func (e *Executor) QuickNmapScan(target string) (*models.ToolOutput, error) {
+	cleanTarget := CleanTarget(target)
 	args := []string{
 		"-F",       // fast mode - common ports only
 		"-oJ", "-", // output JSON to stdout
-		target,
+		cleanTarget,
 	}
 
 	output, err := e.RunTool("nmap", args, models.PhaseRecon, target)
@@ -69,10 +73,11 @@ func (e *Executor) QuickNmapScan(target string) (*models.ToolOutput, error) {
 
 // NmapPingDiscovery does ping scan to discover live hosts
 func (e *Executor) NmapPingDiscovery(target string) (*models.ToolOutput, error) {
+	cleanTarget := CleanTarget(target)
 	args := []string{
 		"-sn",      // ping scan
-		"-oJ", "-", // output JSON
-		target,
+		"-oJ", "-", // output JSON to stdout
+		cleanTarget,
 	}
 
 	output, err := e.RunTool("nmap", args, models.PhaseRecon, target)

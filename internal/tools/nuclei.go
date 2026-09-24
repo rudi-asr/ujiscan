@@ -9,10 +9,11 @@ import (
 
 // ScanWithNuclei executes nuclei vulnerability scanner
 func (e *Executor) ScanWithNuclei(target string) (*models.ToolOutput, error) {
+	cleanTarget := CleanTarget(target)
 	args := []string{
-		"-u", target,
-		"-json", // JSON output
-		"-stats", "false", // no stats
+		"-u", cleanTarget,
+		"-jsonl", // JSONL output (nuclei v3+)
+		// Removed: -json, -stats (not available/needed in v3.11+)
 	}
 
 	output, err := e.RunTool("nuclei", args, models.PhaseEnum, target)
@@ -20,9 +21,9 @@ func (e *Executor) ScanWithNuclei(target string) (*models.ToolOutput, error) {
 		return output, err
 	}
 
-	// Parse JSON output
+	// Parse JSONL output (one JSON object per line)
 	if output.Stdout != "" {
-		parsed, parseErr := parseNucleiJSON(output.Stdout)
+		parsed, parseErr := parseNucleiJSONL(output.Stdout)
 		if parseErr == nil {
 			output.Parsed = parsed
 		}
@@ -75,6 +76,27 @@ func parseNucleiJSON(jsonOutput string) ([]models.NucleiResult, error) {
 		results = append(results, result)
 	}
 
+	return results, nil
+}
+
+// parseNucleiJSONL parses nuclei JSONL output (one JSON object per line)
+func parseNucleiJSONL(jsonlOutput string) (interface{}, error) {
+	var results []interface{}
+	
+	lines := strings.Split(strings.TrimSpace(jsonlOutput), "\n")
+	for _, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		
+		var obj interface{}
+		if err := json.Unmarshal([]byte(line), &obj); err != nil {
+			// Skip malformed lines, continue parsing
+			continue
+		}
+		results = append(results, obj)
+	}
+	
 	return results, nil
 }
 

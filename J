@@ -1,6 +1,6 @@
-# Nmap 7.99 scan initiated Thu Sep 24 23:59:39 2026 as: nmap -F -oJ - http://mitracakra.digital/
+# Nmap 7.99 scan initiated Fri Sep 25 00:03:19 2026 as: nmap -F -oJ - http://mitracakra.digital/
 Unable to split netmask from target expression: "http://mitracakra.digital/"
 Failed to resolve "-".
 Bare '-': did you put a space between '--'?
 WARNING: No targets were specified, so 0 hosts scanned.
-# Nmap done at Thu Sep 24 23:59:43 2026 -- 0 IP addresses (0 hosts up) scanned in 4.53 seconds
+# Nmap done at Fri Sep 25 00:03:24 2026 -- 0 IP addresses (0 hosts up) scanned in 4.52 seconds
