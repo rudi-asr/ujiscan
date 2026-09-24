@@ -4,9 +4,489 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ujiscan - Agentic Penetration Testing Platform</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    color-scheme: dark light;
+}
+
+html[data-theme="dark"] {
+    --bg: #0a0e27;
+    --fg: #e0e0e0;
+    --border: #333;
+    --accent: #00d4ff;
+    --success: #00ff88;
+    --error: #ff3333;
+    --warning: #ffaa00;
+}
+
+html[data-theme="light"] {
+    --bg: #ffffff;
+    --fg: #000000;
+    --border: #cccccc;
+    --accent: #0066ff;
+    --success: #00aa00;
+    --error: #cc0000;
+    --warning: #ff6600;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 20px;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    color: var(--accent);
+}
+
+header .subtitle {
+    font-size: 1.1em;
+    color: var(--fg);
+    opacity: 0.8;
+}
+
+.github-info {
+    margin-top: 15px;
+}
+
+.github-info a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.95em;
+}
+
+.github-info a:hover {
+    text-decoration: underline;
+}
+
+.nav-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+}
+
+.nav-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--fg);
+    cursor: pointer;
+    font-size: 1em;
+    transition: all 0.3s;
+}
+
+.nav-btn:hover {
+    color: var(--accent);
+}
+
+.nav-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.form-section, .logs-section, .results-section {
+    margin-bottom: 30px;
+}
+
+.form-section h2, .logs-section h3, .results-section h3 {
+    margin-bottom: 15px;
+    color: var(--accent);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    background: var(--bg);
+    color: var(--fg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 5px var(--accent);
+}
+
+.btn-primary {
+    padding: 12px 30px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    font-weight: 600;
+    transition: all 0.3s;
+}
+
+.btn-primary:hover {
+    opacity: 0.8;
+    transform: translateY(-2px);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.alert {
+    padding: 12px 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    border-left: 4px solid;
+}
+
+.alert.info {
+    background: rgba(0, 212, 255, 0.1);
+    border-left-color: var(--accent);
+    color: var(--fg);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 8px 15px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.status-badge.idle {
+    background: rgba(200, 200, 200, 0.2);
+    color: #aaa;
+}
+
+.status-badge.running {
+    background: rgba(0, 212, 255, 0.2);
+    color: var(--accent);
+}
+
+.status-badge.completed {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--success);
+}
+
+.status-badge.timeout {
+    background: rgba(255, 51, 51, 0.2);
+    color: var(--error);
+}
+
+.logs-container {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.log-entry {
+    margin-bottom: 8px;
+    color: #aaa;
+}
+
+.log-entry.error {
+    color: var(--error);
+}
+
+.log-entry.success {
+    color: var(--success);
+}
+
+.results-container {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 20px;
+}
+
+.results-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.results-header h3 {
+    color: var(--accent);
+    margin-bottom: 10px;
+}
+
+.result-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+    font-size: 0.95em;
+}
+
+.result-summary-item {
+    padding: 10px;
+    background: rgba(0, 212, 255, 0.05);
+    border-left: 3px solid var(--accent);
+}
+
+.result-summary-item strong {
+    color: var(--accent);
+}
+
+.tool-result {
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.5);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+}
+
+.tool-result h4 {
+    color: var(--accent);
+    margin-bottom: 10px;
+}
+
+.tool-result .result-details {
+    margin-bottom: 10px;
+    font-size: 0.9em;
+}
+
+.tool-result .result-details p {
+    margin: 5px 0;
+}
+
+.result-details strong {
+    color: var(--accent);
+    min-width: 100px;
+    display: inline-block;
+}
+
+.tool-output {
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85em;
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.tool-output.empty {
+    color: #666;
+    font-style: italic;
+}
+
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.tool-card {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.tool-card h4 {
+    color: var(--accent);
+    margin-bottom: 10px;
+}
+
+.tool-card .status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.tool-card .status.available {
+    background: rgba(0, 255, 136, 0.2);
+    color: var(--success);
+}
+
+.tool-card .status.unavailable {
+    background: rgba(255, 51, 51, 0.2);
+    color: var(--error);
+}
+
+.playbooks-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.playbook-card {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.playbook-card h4 {
+    color: var(--accent);
+    margin-bottom: 10px;
+}
+
+.playbook-card p {
+    font-size: 0.9em;
+    color: rgba(224, 224, 224, 0.8);
+    margin-bottom: 10px;
+}
+
+.playbook-card .btn-small {
+    padding: 6px 12px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.playbook-card .btn-small:hover {
+    opacity: 0.8;
+}
+
+.docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 15px;
+}
+
+.doc-card {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 4px;
+}
+
+.doc-card h3 {
+    color: var(--accent);
+    margin-bottom: 10px;
+}
+
+.doc-card p {
+    font-size: 0.9em;
+    color: rgba(224, 224, 224, 0.8);
+    margin-bottom: 10px;
+}
+
+.doc-card a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.doc-card a:hover {
+    text-decoration: underline;
+}
+
+.loading {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+}
+
+footer {
+    text-align: center;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.9em;
+    color: #666;
+}
+
+footer a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    padding: 10px 15px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2em;
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+}
+
+.theme-toggle:hover {
+    opacity: 0.8;
+    transform: scale(1.05);
+}
+    </style>
 </head>
 <body>
+    <button class="theme-toggle" id="themeToggle">☀️</button>
+
     <div class="container">
         <header>
             <h1>ujiscan</h1>
@@ -55,7 +535,7 @@
 
             <div class="logs-section">
                 <h3>Scan Status</h3>
-                <div class="status-badge" id="statusBadge">IDLE</div>
+                <div class="status-badge idle" id="statusBadge">IDLE</div>
                 <div class="logs-container" id="logsContainer">
                     <div class="log-entry">[Ready for scan]</div>
                 </div>
@@ -98,37 +578,15 @@
                     <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/README.md" target="_blank">View →</a>
                 </div>
                 <div class="doc-card">
-                    <h3>⚙️ DEVELOPMENT</h3>
-                    <p>Detailed phase breakdown and known issues with fixes</p>
+                    <h3>🔧 DEVELOPMENT</h3>
+                    <p>Development setup and architecture details</p>
                     <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/DEVELOPMENT.md" target="_blank">View →</a>
                 </div>
                 <div class="doc-card">
-                    <h3>🔄 HANDOFF_LLM</h3>
-                    <p>Context for next LLM session and model switches</p>
+                    <h3>📝 HANDOFF</h3>
+                    <p>LLM handoff documentation</p>
                     <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/HANDOFF_LLM.md" target="_blank">View →</a>
                 </div>
-                <div class="doc-card">
-                    <h3>✨ BEST PRACTICES</h3>
-                    <p>LLM handoff best practices guide</p>
-                    <a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/LLM_HANDOFF_BEST_PRACTICES.md" target="_blank">View →</a>
-                </div>
-            </div>
-
-            <div class="github-section">
-                <h3>📂 Repository Structure</h3>
-                <div id="repoStructure" class="repo-tree">
-                    <div class="loading">Loading repository structure...</div>
-                </div>
-            </div>
-
-            <div class="github-section">
-                <h3>📝 Key Files</h3>
-                <ul class="files-list">
-                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/cmd/server/main.go" target="_blank">cmd/server/main.go</a> - Server entry point</li>
-                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/internal/api/handlers.go" target="_blank">internal/api/handlers.go</a> - API endpoints</li>
-                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/internal/playbook/playbook.go" target="_blank">internal/playbook/playbook.go</a> - Playbook engine</li>
-                    <li><a href="https://raw.githubusercontent.com/rudi-asr/ujiscan/main/internal/ai/claude.go" target="_blank">internal/ai/claude.go</a> - Claude API integration</li>
-                </ul>
             </div>
         </section>
 
@@ -137,232 +595,348 @@
         </footer>
     </div>
 
-    <script src="loader.js"></script>
     <script>
-        const GITHUB_API = 'https://api.github.com/repos/rudi-asr/ujiscan';
-        const GITHUB_RAW = 'https://raw.githubusercontent.com/rudi-asr/ujiscan/main';
-        const SERVER = 'http://localhost:8081';
+// ============================================================================
+// UJISCAN DASHBOARD - MAIN APPLICATION LOGIC
+// ============================================================================
 
-        // Tab switching
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const tabName = e.target.dataset.tab;
-                switchTab(tabName);
-            });
-        });
+const SERVER = 'http://localhost:8081';
+const GITHUB_API = 'https://api.github.com/repos/rudi-asr/ujiscan';
+const GITHUB_RAW = 'https://raw.githubusercontent.com/rudi-asr/ujiscan/main';
 
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
+let currentScanId = null;
+let pollingInterval = null;
 
-            if (tabName === 'tools') loadTools();
-            if (tabName === 'playbooks') loadPlaybooksTab();
-            if (tabName === 'docs') loadRepoStructure();
-        }
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
 
-        // Load tools from server
-        async function loadTools() {
-            try {
-                const response = await fetch(`${SERVER}/api/tools`, { 
-                    signal: AbortSignal.timeout(5000) 
-                });
-                const tools = await response.json();
-                const html = tools.map(t => `
-                    <div class="tool-card">
-                        <h4>${t.name}</h4>
-                        <p>Status: <span class="badge ${t.available ? 'available' : 'unavailable'}">
-                            ${t.available ? 'Available' : 'Not Found'}
-                        </span></p>
-                    </div>
-                `).join('');
-                document.getElementById('toolsList').innerHTML = html || '<p>No tools available</p>';
-            } catch (error) {
-                document.getElementById('toolsList').innerHTML = `
-                    <div class="error-card">
-                        <p>⚠️ Cannot connect to backend server</p>
-                        <small>${error.message}</small>
-                        <p>Ensure server is running: <code>./ujiscan</code></p>
-                    </div>
-                `;
-            }
-        }
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'N/A';
+        return date.toLocaleString();
+    } catch (e) {
+        console.error('Date parse error:', dateString, e);
+        return 'N/A';
+    }
+}
 
-        // Load playbooks from GitHub
-        async function loadPlaybooksTab() {
-            try {
-                const response = await fetch(`${GITHUB_API}/contents/playbooks`);
-                const files = await response.json();
-                const playbooks = files.filter(f => f.name.endsWith('.md'));
-                
-                const html = await Promise.all(playbooks.map(async (pb) => {
-                    const content = await fetch(`${GITHUB_RAW}/playbooks/${pb.name}`).then(r => r.text());
-                    const lines = content.split('\n');
-                    const name = lines[1]?.replace('# ', '') || pb.name;
-                    const desc = lines[2]?.replace('> ', '') || 'No description';
-                    
-                    return `
-                        <div class="playbook-card">
-                            <h3>${name}</h3>
-                            <p>${desc}</p>
-                            <a href="${GITHUB_RAW}/playbooks/${pb.name}" target="_blank">View on GitHub →</a>
-                        </div>
-                    `;
-                })).then(cards => cards.join(''));
-                
-                document.getElementById('playbooksList').innerHTML = html;
-            } catch (error) {
-                document.getElementById('playbooksList').innerHTML = `<p class="error">Error loading playbooks: ${error.message}</p>`;
-            }
-        }
+function formatDuration(startedAt, endedAt) {
+    if (!startedAt || !endedAt) return 'N/A';
+    try {
+        const start = new Date(startedAt);
+        const end = new Date(endedAt);
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return 'N/A';
+        
+        const seconds = Math.round((end - start) / 1000);
+        return seconds > 0 ? `${seconds}s` : 'N/A';
+    } catch (e) {
+        console.error('Duration calc error:', e);
+        return 'N/A';
+    }
+}
 
-        // Load repository structure from GitHub
-        async function loadRepoStructure() {
-            try {
-                const response = await fetch(`${GITHUB_API}/contents`);
-                const contents = await response.json();
-                
-                const html = contents
-                    .filter(item => !item.name.startsWith('.') && item.name !== 'web')
-                    .map(item => `
-                        <div class="tree-item">
-                            <span class="tree-icon">${item.type === 'dir' ? '📁' : '📄'}</span>
-                            <a href="https://github.com/rudi-asr/ujiscan/tree/main/${item.path}" target="_blank">${item.name}</a>
-                        </div>
-                    `).join('');
-                
-                document.getElementById('repoStructure').innerHTML = html;
-            } catch (error) {
-                document.getElementById('repoStructure').innerHTML = `<p class="error">Error loading structure: ${error.message}</p>`;
-            }
-        }
+// ============================================================================
+// DOM MANIPULATION
+// ============================================================================
 
-        // Scan form
-        document.getElementById('scanForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const target = document.getElementById('target').value;
-            const scanType = document.getElementById('scanType').value;
-            
-            try {
-                const endpoint = scanType === 'regular' ? '/api/scan' : 
-                                 scanType === 'playbook' ? '/api/scan/playbook' : 
-                                 '/api/agentic';
-                
-                const payload = { target };
-                if (scanType === 'playbook' || scanType === 'agentic') {
-                    payload.playbook = document.getElementById('playbook').value || 'network-discovery';
-                }
-                
-                log(`Starting ${scanType} scan for ${target}...`);
-                updateStatus('PENDING');
-                
-                const response = await fetch(`${SERVER}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                
-                if (!response.ok) throw new Error(`Server error: ${response.status}`);
-                const result = await response.json();
-                const scanId = result.id;
-                
-                log(`Scan started: ${scanId}`);
-                updateStatus('RUNNING');
-                
-                // Poll for results
-                let completed = false;
-                let attempts = 0;
-                while (!completed && attempts < 60) {
-                    await new Promise(r => setTimeout(r, 1000));
-                    const resultResponse = await fetch(`${SERVER}/api/scan/${scanId}`);
-                    const scanResult = await resultResponse.json();
-                    
-                    if (scanResult.status === 'completed') {
-                        log('Scan completed');
-                        updateStatus('COMPLETED');
-                        displayResults(scanResult);
-                        completed = true;
-                    }
-                    attempts++;
-                }
-                
-                if (!completed) {
-                    log('Scan timeout', 'error');
-                    updateStatus('TIMEOUT');
-                }
-            } catch (error) {
-                log(`Error: ${error.message}`, 'error');
-                updateStatus('ERROR');
-            }
-        });
+function updateStatusBadge(status) {
+    const badge = document.getElementById('statusBadge');
+    badge.className = `status-badge ${status.toLowerCase()}`;
+    badge.textContent = status.toUpperCase();
+}
 
-        function log(message, type = 'info') {
-            const time = new Date().toLocaleTimeString();
-            const logsContainer = document.getElementById('logsContainer');
-            const entry = document.createElement('div');
-            entry.className = `log-entry ${type}`;
-            entry.textContent = `[${time}] ${message}`;
-            logsContainer.appendChild(entry);
-            logsContainer.scrollTop = logsContainer.scrollHeight;
-        }
+function addLogEntry(message, type = 'info') {
+    const logsContainer = document.getElementById('logsContainer');
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.textContent = message;
+    logsContainer.appendChild(entry);
+    logsContainer.scrollTop = logsContainer.scrollHeight;
+}
 
-        function updateStatus(status) {
-            const badge = document.getElementById('statusBadge');
-            badge.textContent = status;
-            badge.className = `status-badge status-${status.toLowerCase()}`;
-        }
+function displayResults(scan) {
+    const resultsContainer = document.getElementById('resultsContainer');
+    if (!scan || !scan.results || scan.results.length === 0) {
+        resultsContainer.innerHTML = '<p>No scan results yet</p>';
+        return;
+    }
 
-        function displayResults(scanResult) {
-            const resultsContainer = document.getElementById('resultsContainer');
-            const html = `
-                <div class="result-header">
-                    <p><strong>Target:</strong> ${scanResult.target} | <strong>Started:</strong> ${new Date(scanResult.start_time).toLocaleString()}</p>
+    let html = `
+        <div class="results-header">
+            <h3>Scan Results</h3>
+            <div class="result-summary">
+                <div class="result-summary-item">
+                    <strong>Target:</strong> ${scan.target}
                 </div>
-                <div class="results-list">
-                    ${scanResult.results.map((r, i) => `
-                        <div class="result-item">
-                            <div class="result-header-item">
-                                <span class="result-tool">${r.tool_name}</span>
-                                <span class="result-exit ${r.exit_code === 0 ? 'success' : 'error'}">Exit: ${r.exit_code}</span>
-                            </div>
-                            <details>
-                                <summary>Command: ${r.command}</summary>
-                                <pre>${r.stdout || 'No output'}</pre>
-                            </details>
-                        </div>
-                    `).join('')}
+                <div class="result-summary-item">
+                    <strong>Started:</strong> ${formatDate(scan.started_at)}
                 </div>
-            `;
-            resultsContainer.innerHTML = html;
+                <div class="result-summary-item">
+                    <strong>Duration:</strong> ${formatDuration(scan.started_at, scan.ended_at)}
+                </div>
+                <div class="result-summary-item">
+                    <strong>Status:</strong> ${scan.status}
+                </div>
+            </div>
+        </div>
+    `;
+
+    scan.results.forEach((result, idx) => {
+        html += `
+            <div class="tool-result">
+                <h4>${idx + 1}. ${result.tool}</h4>
+                <div class="result-details">
+                    <p><strong>Exit Code:</strong> ${result.exit_code}</p>
+                    <p><strong>Command:</strong> <code>${escapeHtml(result.command)}</code></p>
+                    ${result.args ? `<p><strong>Args:</strong> <code>${escapeHtml(result.args)}</code></p>` : ''}
+                </div>
+        `;
+
+        const output = result.stdout || result.stderr || '';
+        if (output.trim()) {
+            html += `<div class="tool-output">${escapeHtml(output)}</div>`;
+        } else {
+            html += `<div class="tool-output empty">[No output]</div>`;
         }
 
-        // Scan type change
-        document.getElementById('scanType').addEventListener('change', (e) => {
-            const group = document.getElementById('playbookGroup');
-            if (e.target.value !== 'regular') {
-                group.style.display = 'block';
-                loadPlaybooksForSelect();
-            } else {
-                group.style.display = 'none';
-            }
+        html += `</div>`;
+    });
+
+    resultsContainer.innerHTML = html;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ============================================================================
+// API CALLS
+// ============================================================================
+
+async function startScan(target, scanType, playbook = null) {
+    try {
+        const payload = { target, scan_type: scanType };
+        if (playbook) payload.playbook = playbook;
+
+        const response = await fetch(`${SERVER}/api/scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(10000)
         });
 
-        async function loadPlaybooksForSelect() {
-            try {
-                const response = await fetch(`${SERVER}/api/playbooks`, { 
-                    signal: AbortSignal.timeout(5000) 
-                });
-                const playbooks = await response.json();
-                const select = document.getElementById('playbook');
-                select.innerHTML = playbooks.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
-            } catch (error) {
-                console.error('Error loading playbooks:', error);
-            }
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Start scan error:', error);
+        addLogEntry(`Error: ${error.message}`, 'error');
+        throw error;
+    }
+}
 
-        // Initial load
-        loadPlaybooksTab();
+async function getScan(scanId) {
+    try {
+        const response = await fetch(`${SERVER}/api/scan/${scanId}`, {
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Get scan error:', error);
+        throw error;
+    }
+}
+
+async function getTools() {
+    try {
+        const response = await fetch(`${SERVER}/api/tools`, {
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Get tools error:', error);
+        return [];
+    }
+}
+
+async function getPlaybooks() {
+    try {
+        const response = await fetch(`${SERVER}/api/playbooks`, {
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.json();
+    } catch (error) {
+        console.error('Get playbooks error:', error);
+        return [];
+    }
+}
+
+// ============================================================================
+// POLLING
+// ============================================================================
+
+function startPolling(scanId) {
+    currentScanId = scanId;
+    let attempts = 0;
+    const maxAttempts = 120; // 2 minutes with 1s interval
+
+    pollingInterval = setInterval(async () => {
+        attempts++;
+
+        try {
+            const scan = await getScan(scanId);
+            addLogEntry(`[${new Date().toLocaleTimeString()}] Status: ${scan.status}`);
+            updateStatusBadge(scan.status);
+
+            if (scan.status === 'completed' || scan.status === 'failed') {
+                clearInterval(pollingInterval);
+                displayResults(scan);
+                return;
+            }
+
+            if (attempts >= maxAttempts) {
+                clearInterval(pollingInterval);
+                updateStatusBadge('TIMEOUT');
+                addLogEntry('Scan timeout after 2 minutes', 'error');
+            }
+        } catch (error) {
+            console.error('Polling error:', error);
+        }
+    }, 1000);
+}
+
+// ============================================================================
+// EVENT HANDLERS
+// ============================================================================
+
+document.getElementById('scanForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const target = document.getElementById('target').value.trim();
+    const scanType = document.getElementById('scanType').value;
+    const playbook = document.getElementById('playbook').value;
+
+    if (!target) {
+        alert('Please enter a target');
+        return;
+    }
+
+    document.getElementById('logsContainer').innerHTML = '';
+    addLogEntry(`[${new Date().toLocaleTimeString()}] Starting ${scanType} scan for ${target}...`);
+    updateStatusBadge('RUNNING');
+
+    try {
+        const result = await startScan(target, scanType, playbook || null);
+        currentScanId = result.id;
+        addLogEntry(`[${new Date().toLocaleTimeString()}] Scan started: ${result.id}`);
+        startPolling(result.id);
+    } catch (error) {
+        updateStatusBadge('FAILED');
+        addLogEntry(`Scan failed: ${error.message}`, 'error');
+    }
+});
+
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        document.getElementById(`${e.target.dataset.tab}-tab`).classList.add('active');
+
+        if (e.target.dataset.tab === 'tools') loadTools();
+        if (e.target.dataset.tab === 'playbooks') loadPlaybooksTab();
+    });
+});
+
+// ============================================================================
+// TAB LOADERS
+// ============================================================================
+
+async function loadTools() {
+    const toolsList = document.getElementById('toolsList');
+    toolsList.innerHTML = '<div class="loading">Loading tools...</div>';
+
+    const tools = await getTools();
+    if (!tools || tools.length === 0) {
+        toolsList.innerHTML = '<div class="alert info">⚠️ Cannot connect to backend server<br>Ensure server is running: ./ujiscan</div>';
+        return;
+    }
+
+    toolsList.innerHTML = tools.map(tool => `
+        <div class="tool-card">
+            <h4>${tool.name}</h4>
+            <p>${tool.description || ''}</p>
+            <span class="status available">✓ Available</span>
+        </div>
+    `).join('');
+}
+
+async function loadPlaybooksTab() {
+    const playbooksList = document.getElementById('playbooksList');
+    playbooksList.innerHTML = '<div class="loading">Loading playbooks...</div>';
+
+    const playbooks = await getPlaybooks();
+    if (!playbooks || playbooks.length === 0) {
+        playbooksList.innerHTML = '<div class="alert info">No playbooks available</div>';
+        return;
+    }
+
+    playbooksList.innerHTML = playbooks.map(pb => `
+        <div class="playbook-card">
+            <h4>${pb.name}</h4>
+            <p>${pb.description || ''}</p>
+            <button class="btn-small" onclick="alert('Playbook: ' + '${pb.name}')">View Details →</button>
+        </div>
+    `).join('');
+}
+
+// ============================================================================
+// THEME TOGGLE
+// ============================================================================
+
+const html = document.documentElement;
+const themeToggle = document.getElementById('themeToggle');
+
+// Initialize theme
+const savedTheme = localStorage.getItem('theme') || 'dark';
+html.setAttribute('data-theme', savedTheme);
+themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '☾';
+
+themeToggle.addEventListener('click', () => {
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    themeToggle.textContent = newTheme === 'dark' ? '☀️' : '☾';
+});
+
+// ============================================================================
+// PLAYBOOK SELECTOR
+// ============================================================================
+
+document.getElementById('scanType').addEventListener('change', async (e) => {
+    const playbookGroup = document.getElementById('playbookGroup');
+    if (e.target.value === 'playbook') {
+        playbookGroup.style.display = 'block';
+        const playbooks = await getPlaybooks();
+        const select = document.getElementById('playbook');
+        select.innerHTML = playbooks.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+    } else {
+        playbookGroup.style.display = 'none';
+    }
+});
+
+console.log('Dashboard loaded. Server: ' + SERVER);
     </script>
 </body>
 </html>
