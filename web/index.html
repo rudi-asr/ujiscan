@@ -3,56 +3,334 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ujiscan - Penetration Testing Agent</title>
-    <link rel="stylesheet" href="/style.css">
+    <title>ujiscan - Agentic Penetration Testing Platform</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>ujiscan</h1>
-            <p>Agentic Penetration Testing Platform</p>
+            <p class="subtitle">Agentic Penetration Testing Platform</p>
+            <div class="github-info">
+                <a href="https://github.com/rudi-asr/ujiscan" target="_blank">🔗 View on GitHub</a>
+            </div>
         </header>
 
-        <main>
-            <section class="scan-section">
+        <nav class="nav-tabs">
+            <button class="nav-btn active" data-tab="scan">Scan</button>
+            <button class="nav-btn" data-tab="tools">Tools</button>
+            <button class="nav-btn" data-tab="playbooks">Playbooks</button>
+            <button class="nav-btn" data-tab="docs">Documentation</button>
+        </nav>
+
+        <!-- SCAN TAB -->
+        <section id="scan-tab" class="tab-content active">
+            <div class="form-section">
                 <h2>Start Scan</h2>
                 <form id="scanForm">
-                    <input 
-                        type="text" 
-                        id="target" 
-                        placeholder="Target (e.g., 192.168.1.1 or example.com)" 
-                        required
-                    >
-                    <button type="submit">Start Scan</button>
+                    <div class="form-group">
+                        <label>Target (e.g., 192.168.1.1 or example.com)</label>
+                        <input type="text" id="target" placeholder="127.0.0.1" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Scan Type</label>
+                        <select id="scanType">
+                            <option value="regular">Regular Scan (nmap + nuclei)</option>
+                            <option value="playbook">Playbook Scan (guided)</option>
+                            <option value="agentic">Agentic Scan (AI-driven)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="playbookGroup" style="display:none;">
+                        <label>Playbook</label>
+                        <select id="playbook">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Start Scan</button>
                 </form>
-            </section>
+            </div>
 
-            <section class="tools-section">
-                <h2>Available Tools</h2>
-                <div id="toolsList" class="tools-list"></div>
-            </section>
+            <div class="logs-section">
+                <h3>Scan Status</h3>
+                <div class="status-badge" id="statusBadge">IDLE</div>
+                <div class="logs-container" id="logsContainer">
+                    <div class="log-entry">[Ready for scan]</div>
+                </div>
+            </div>
 
-            <section class="status-section">
-                <h2>Scan Status</h2>
-                <div id="status">Ready</div>
-            </section>
+            <div class="results-section">
+                <h3>Results</h3>
+                <div id="resultsContainer" class="results-container">
+                    <p>No scan results yet</p>
+                </div>
+            </div>
+        </section>
 
-            <section class="logs-section">
-                <h2>Logs</h2>
-                <div id="logs" class="logs-container"></div>
-            </section>
+        <!-- TOOLS TAB -->
+        <section id="tools-tab" class="tab-content">
+            <h2>Available Tools</h2>
+            <div id="toolsList" class="tools-grid">
+                <div class="loading">Loading tools...</div>
+            </div>
+        </section>
 
-            <section class="results-section">
-                <h2>Results</h2>
-                <div id="results" class="results-container"></div>
-            </section>
-        </main>
+        <!-- PLAYBOOKS TAB -->
+        <section id="playbooks-tab" class="tab-content">
+            <h2>Available Playbooks</h2>
+            <div id="playbooksList" class="playbooks-list">
+                <div class="loading">Loading playbooks from GitHub...</div>
+            </div>
+        </section>
+
+        <!-- DOCUMENTATION TAB -->
+        <section id="docs-tab" class="tab-content">
+            <h2>Documentation</h2>
+            <div class="docs-grid">
+                <div class="doc-card">
+                    <h3>README</h3>
+                    <p>Quick start guide and architecture overview</p>
+                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/README.md" target="_blank">Read on GitHub →</a>
+                </div>
+                <div class="doc-card">
+                    <h3>DEVELOPMENT</h3>
+                    <p>Detailed phase breakdown and known issues with fixes</p>
+                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/DEVELOPMENT.md" target="_blank">Read on GitHub →</a>
+                </div>
+                <div class="doc-card">
+                    <h3>HANDOFF_LLM</h3>
+                    <p>Context for next LLM session and model switches</p>
+                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/HANDOFF_LLM.md" target="_blank">Read on GitHub →</a>
+                </div>
+                <div class="doc-card">
+                    <h3>BEST PRACTICES</h3>
+                    <p>LLM handoff best practices guide</p>
+                    <a href="https://github.com/rudi-asr/ujiscan/blob/main/LLM_HANDOFF_BEST_PRACTICES.md" target="_blank">Read on GitHub →</a>
+                </div>
+            </div>
+
+            <div class="github-section">
+                <h3>📂 Repository Structure (from GitHub)</h3>
+                <div id="repoStructure" class="repo-tree">
+                    <div class="loading">Loading repository structure...</div>
+                </div>
+            </div>
+        </section>
 
         <footer>
-            <p>ujiscan v0.1.0 | Offensive Security | <span id="apiStatus">API: checking...</span></p>
+            <p>ujiscan v0.1.0 | Offensive Security | <a href="https://github.com/rudi-asr/ujiscan" target="_blank">GitHub</a></p>
         </footer>
     </div>
 
-    <script src="/app.js"></script>
+    <script src="loader.js"></script>
+    <script>
+        const GITHUB_API = 'https://api.github.com/repos/rudi-asr/ujiscan';
+        const GITHUB_RAW = 'https://raw.githubusercontent.com/rudi-asr/ujiscan/main';
+        const SERVER = 'http://localhost:8081';
+
+        // Tab switching
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const tabName = e.target.dataset.tab;
+                switchTab(tabName);
+            });
+        });
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+
+            if (tabName === 'tools') loadTools();
+            if (tabName === 'playbooks') loadPlaybooksTab();
+            if (tabName === 'docs') loadRepoStructure();
+        }
+
+        // Load tools from server
+        async function loadTools() {
+            try {
+                const response = await fetch(`${SERVER}/api/tools`);
+                const tools = await response.json();
+                const html = tools.map(t => `
+                    <div class="tool-card">
+                        <h4>${t.name}</h4>
+                        <p>Status: <span class="badge ${t.available ? 'available' : 'unavailable'}">
+                            ${t.available ? 'Available' : 'Not Found'}
+                        </span></p>
+                    </div>
+                `).join('');
+                document.getElementById('toolsList').innerHTML = html || '<p>No tools available</p>';
+            } catch (error) {
+                document.getElementById('toolsList').innerHTML = `<p class="error">Error loading tools: ${error.message}</p>`;
+            }
+        }
+
+        // Load playbooks from GitHub
+        async function loadPlaybooksTab() {
+            try {
+                const response = await fetch(`${GITHUB_API}/contents/playbooks`);
+                const files = await response.json();
+                const playbooks = files.filter(f => f.name.endsWith('.md'));
+                
+                const html = await Promise.all(playbooks.map(async (pb) => {
+                    const content = await fetch(`${GITHUB_RAW}/playbooks/${pb.name}`).then(r => r.text());
+                    const lines = content.split('\n');
+                    const name = lines[1]?.replace('# ', '') || pb.name;
+                    const desc = lines[2]?.replace('> ', '') || 'No description';
+                    
+                    return `
+                        <div class="playbook-card">
+                            <h3>${name}</h3>
+                            <p>${desc}</p>
+                            <a href="${GITHUB_RAW}/playbooks/${pb.name}" target="_blank">View on GitHub →</a>
+                        </div>
+                    `;
+                })).then(cards => cards.join(''));
+                
+                document.getElementById('playbooksList').innerHTML = html;
+            } catch (error) {
+                document.getElementById('playbooksList').innerHTML = `<p class="error">Error loading playbooks: ${error.message}</p>`;
+            }
+        }
+
+        // Load repository structure from GitHub
+        async function loadRepoStructure() {
+            try {
+                const response = await fetch(`${GITHUB_API}/contents`);
+                const contents = await response.json();
+                
+                const html = contents
+                    .filter(item => !item.name.startsWith('.'))
+                    .map(item => `
+                        <div class="tree-item" style="padding-left: ${item.type === 'dir' ? '0' : '20px'}">
+                            <span class="tree-icon">${item.type === 'dir' ? '📁' : '📄'}</span>
+                            <a href="${item.html_url}" target="_blank">${item.name}</a>
+                        </div>
+                    `).join('');
+                
+                document.getElementById('repoStructure').innerHTML = html;
+            } catch (error) {
+                document.getElementById('repoStructure').innerHTML = `<p class="error">Error loading structure: ${error.message}</p>`;
+            }
+        }
+
+        // Scan form
+        document.getElementById('scanForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const target = document.getElementById('target').value;
+            const scanType = document.getElementById('scanType').value;
+            
+            try {
+                const endpoint = scanType === 'regular' ? '/api/scan' : 
+                                 scanType === 'playbook' ? '/api/scan/playbook' : 
+                                 '/api/agentic';
+                
+                const payload = { target };
+                if (scanType === 'playbook' || scanType === 'agentic') {
+                    payload.playbook = document.getElementById('playbook').value || 'network-discovery';
+                }
+                
+                log(`Starting ${scanType} scan for ${target}...`);
+                updateStatus('PENDING');
+                
+                const response = await fetch(`${SERVER}${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                const scanId = result.id;
+                
+                log(`Scan started: ${scanId}`);
+                updateStatus('RUNNING');
+                
+                // Poll for results
+                let completed = false;
+                let attempts = 0;
+                while (!completed && attempts < 60) {
+                    await new Promise(r => setTimeout(r, 1000));
+                    const resultResponse = await fetch(`${SERVER}/api/scan/${scanId}`);
+                    const scanResult = await resultResponse.json();
+                    
+                    if (scanResult.status === 'completed') {
+                        log('Scan completed');
+                        updateStatus('COMPLETED');
+                        displayResults(scanResult);
+                        completed = true;
+                    }
+                    attempts++;
+                }
+            } catch (error) {
+                log(`Error: ${error.message}`, 'error');
+                updateStatus('ERROR');
+            }
+        });
+
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const logsContainer = document.getElementById('logsContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${time}] ${message}`;
+            logsContainer.appendChild(entry);
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function updateStatus(status) {
+            const badge = document.getElementById('statusBadge');
+            badge.textContent = status;
+            badge.className = `status-badge status-${status.toLowerCase()}`;
+        }
+
+        function displayResults(scanResult) {
+            const resultsContainer = document.getElementById('resultsContainer');
+            const html = `
+                <div class="result-header">
+                    <p><strong>Target:</strong> ${scanResult.target} | <strong>Started:</strong> ${new Date(scanResult.start_time).toLocaleString()}</p>
+                </div>
+                <div class="results-list">
+                    ${scanResult.results.map((r, i) => `
+                        <div class="result-item">
+                            <div class="result-header-item">
+                                <span class="result-tool">${r.tool_name}</span>
+                                <span class="result-exit ${r.exit_code === 0 ? 'success' : 'error'}">Exit: ${r.exit_code}</span>
+                            </div>
+                            <details>
+                                <summary>Command: ${r.command}</summary>
+                                <pre>${r.stdout || 'No output'}</pre>
+                            </details>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            resultsContainer.innerHTML = html;
+        }
+
+        // Scan type change
+        document.getElementById('scanType').addEventListener('change', (e) => {
+            const group = document.getElementById('playbookGroup');
+            if (e.target.value !== 'regular') {
+                group.style.display = 'block';
+                loadPlaybooksForSelect();
+            } else {
+                group.style.display = 'none';
+            }
+        });
+
+        async function loadPlaybooksForSelect() {
+            try {
+                const response = await fetch(`${SERVER}/api/playbooks`);
+                const playbooks = await response.json();
+                const select = document.getElementById('playbook');
+                select.innerHTML = playbooks.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+            } catch (error) {
+                console.error('Error loading playbooks:', error);
+            }
+        }
+
+        // Initial load
+        loadTools();
+    </script>
 </body>
 </html>
