@@ -31,9 +31,6 @@ func (se *ScanExecutor) ExecuteScanAsync(scanID string) {
 
 // ExecuteScan runs a scan synchronously
 func (se *ScanExecutor) ExecuteScan(scanID string) error {
-	se.mu.Lock()
-	defer se.mu.Unlock()
-
 	// Get scan from store
 	scan, err := se.store.GetScan(scanID)
 	if err != nil {

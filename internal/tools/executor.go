@@ -137,14 +137,14 @@ func (e *Executor) InitializeDefaultTools() error {
 			Name:        "nmap",
 			BinaryPath:  "nmap",
 			Description: "Network mapper - service/OS discovery",
-			Timeout:     60,
+			Timeout:     20,
 			OutputType:  "json",
 		},
 		{
 			Name:        "nuclei",
 			BinaryPath:  "nuclei",
 			Description: "Vulnerability scanner - template-based",
-			Timeout:     120,
+			Timeout:     30,
 			OutputType:  "json",
 		},
 		{
