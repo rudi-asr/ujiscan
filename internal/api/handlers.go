@@ -187,11 +187,38 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Find playbook by name (case-insensitive, with variations)
+	// Find playbook - use explicit mapping to be reliable
 	var selectedPlaybook *playbook.Playbook
 	searchName := strings.ToLower(strings.TrimSpace(req.Playbook))
+	fmt.Printf("[DEBUG] Handler looking for playbook: %s\n", req.Playbook)
+	fmt.Printf("[DEBUG] Search name (lowercase): %s\n", searchName)
+	fmt.Printf("[DEBUG] Available playbooks: %v\n", len(availablePlaybooks))
+	for i, pb := range availablePlaybooks {
+		fmt.Printf("[DEBUG]   %d: %s\n", i, pb.Name)
+	}
+	
+	// Direct mapping from request to playbook names
+	var targetName string
+	switch searchName {
+	case "network-discovery", "network discovery":
+		targetName = "Network Discovery"
+	case "vulnerability-quick", "vulnerability quick scan":
+		targetName = "Vulnerability Quick Scan"
+	case "web-full-scan", "web server full scan", "web-server-full-scan":
+		targetName = "Web Server Full Scan"
+	default:
+		// Fallback: case-insensitive search
+		for _, pb := range availablePlaybooks {
+			if strings.ToLower(pb.Name) == searchName {
+				targetName = pb.Name
+				break
+			}
+		}
+	}
+	
+	// Find playbook by exact name
 	for _, pb := range availablePlaybooks {
-		if strings.ToLower(pb.Name) == searchName || strings.ToLower(strings.ReplaceAll(pb.Name, " ", "-")) == searchName {
+		if pb.Name == targetName {
 			selectedPlaybook = pb
 			break
 		}
@@ -233,10 +260,15 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		fmt.Printf("[handler] Starting playbook execution: %s for scan %s\n", playbookFilename, scan.ID)
 		err := h.playbookEngine.ExecutePlaybook(scan.ID, playbookFilename, req.Target)
+		fmt.Printf("[handler] Playbook execution completed with error: %v\n", err)
 		if err != nil {
 			fmt.Printf("[handler] Playbook execution error: %v\n", err)
 			// Update scan with error
 			h.scanStore.UpdateScanStatus(scan.ID, models.ScanStatusFailed)
+		} else {
+			// Verify scan has results
+			finalScan, _ := h.scanStore.GetScan(scan.ID)
+			fmt.Printf("[handler] After execution - scan has %d results\n", len(finalScan.Results))
 		}
 	}()
 

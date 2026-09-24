@@ -2,6 +2,7 @@ package playbook
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/rudi-asr/ujiscan/internal/executor"
@@ -27,8 +28,19 @@ func NewEngine(loader *PlaybookLoader, scanExec *executor.ScanExecutor, scanStor
 
 // ExecutePlaybook executes a playbook for a target
 func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target string) error {
+	logFile, _ := os.OpenFile("/tmp/ujiscan_playbook.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer logFile.Close()
+	
+	log := func(msg string) {
+		fmt.Fprintf(logFile, "%s\n", msg)
+		fmt.Fprint(logFile, msg+"\n")
+	}
+	
 	// Load playbook
-	fmt.Printf("[playbook] Loading playbook: %s for scan %s\n", playbookName, scanID)
+	log(fmt.Sprintf("[playbook] Loading playbook: %s for scan %s", playbookName, scanID))
+	log(fmt.Sprintf("[playbook] CWD: %s", os.Getenv("PWD")))
+	wd, _ := os.Getwd()
+	log(fmt.Sprintf("[playbook] os.Getwd(): %s", wd))
 	pb, err := e.loader.LoadPlaybook(playbookName)
 	if err != nil {
 		fmt.Printf("[playbook] Failed to load playbook: %v\n", err)
