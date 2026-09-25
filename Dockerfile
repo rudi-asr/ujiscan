@@ -29,11 +29,16 @@ FROM debian:bookworm-slim
 
 WORKDIR /app
 
-# Install runtime dependencies only
+# Install runtime dependencies + scanning tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libsqlite3-0 \
     wget \
+    curl \
+    dnsutils \
+    nmap \
+    net-tools \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary from builder
