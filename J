@@ -1,1 +1,0 @@
-# Nmap 7.991 scan initiated Sat Sep 26 02:03:43 2026 as: nmap -p 22 -sV -sC -oJ mitracakra.digital 80 443 3306 5432 6379 27017 8080 8443 8000 5000 3000 -
