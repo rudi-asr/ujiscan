@@ -274,13 +274,45 @@ func Run() error {
 	mux.HandleFunc("PUT /api/notifications/{id}/read", requireAuth(dashboardHandler.HandleMarkNotificationAsRead))
 	mux.HandleFunc("DELETE /api/notifications/{id}", requireAuth(dashboardHandler.HandleDeleteNotification))
 
-	// Phase B agent routes (most specific first)
-	mux.HandleFunc("GET /api/agents/tasks/{id}/wait", requireAuth(agentHandler.HandleWaitTask))
-	mux.HandleFunc("GET /api/agents/tasks/{id}", requireAuth(agentHandler.HandleGetTask))
-	mux.HandleFunc("DELETE /api/agents/tasks/{id}", requireAuth(agentHandler.HandleCancelTask))
-	mux.HandleFunc("POST /api/agents/submit", requireAuth(agentHandler.HandleSubmit))
-	mux.HandleFunc("GET /api/agents/status", requireAuth(agentHandler.HandleStatus))
-	mux.HandleFunc("GET /api/agents/tasks", requireAuth(agentHandler.HandleListTasks))
+	// Phase B agent routes (method-less pattern, check method in handler)
+	mux.HandleFunc("/api/agents/tasks/{id}/wait", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		agentHandler.HandleWaitTask(w, r)
+	}))
+	mux.HandleFunc("/api/agents/tasks/{id}", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			agentHandler.HandleGetTask(w, r)
+		case http.MethodDelete:
+			agentHandler.HandleCancelTask(w, r)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
+	mux.HandleFunc("/api/agents/submit", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		agentHandler.HandleSubmit(w, r)
+	}))
+	mux.HandleFunc("/api/agents/status", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		agentHandler.HandleStatus(w, r)
+	}))
+	mux.HandleFunc("/api/agents/tasks", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		agentHandler.HandleListTasks(w, r)
+	}))
 
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
@@ -401,6 +433,7 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 // requireAuth rejects requests without a valid authenticated user context
+// For use with http.HandlerFunc only
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if auth.GetUserID(r) == "" {
@@ -409,6 +442,18 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+// requireAuthMiddleware rejects requests without a valid authenticated user context
+// For use with http.Handler (method-prefixed patterns)
+func requireAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if auth.GetUserID(r) == "" {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // corsMiddleware adds CORS headers to allow requests from GitHub Pages & localhost
