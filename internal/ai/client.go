@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rudi-asr/ujiscan/internal/models"
@@ -13,20 +15,33 @@ import (
 
 // Client handles AI-driven security analysis via OpenAI API
 type Client struct {
-	apiKey    string
-	model     string
-	endpoint  string
-	orgID     string
+	apiKey   string
+	model    string
+	endpoint string
+	orgID    string
+
+	// C.4.4: learning feedback — tracks per-tool success/failure history
+	feedbackMu sync.Mutex
+	feedback   map[string]*ToolFeedback
+}
+
+// ToolFeedback tracks historical tool execution performance (C.4.4).
+type ToolFeedback struct {
+	Tool         string        `json:"tool"`
+	SuccessCount int           `json:"success_count"`
+	FailureCount int           `json:"failure_count"`
+	AvgTime      time.Duration `json:"avg_time_ms"`
+	LastUsed     time.Time     `json:"last_used"`
 }
 
 // AgentDecision represents AI's next-step recommendation
 type AgentDecision struct {
-	Analysis       string   `json:"analysis"`
+	Analysis         string   `json:"analysis"`
 	RecommendedTools []string `json:"recommended_tools"`
-	Reasoning      string   `json:"reasoning"`
-	Confidence     float64  `json:"confidence"`
-	NextPhase      string   `json:"next_phase,omitempty"`
-	StopScan       bool     `json:"stop_scan"`
+	Reasoning        string   `json:"reasoning"`
+	Confidence       float64  `json:"confidence"`
+	NextPhase        string   `json:"next_phase,omitempty"`
+	StopScan         bool     `json:"stop_scan"`
 }
 
 // VulnerabilityAssessment represents findings extracted by AI
@@ -51,17 +66,89 @@ func NewClient() *Client {
 		model:    "gpt-4o-mini", // Cost-effective model for security analysis
 		endpoint: "https://api.openai.com/v1/chat/completions",
 		orgID:    os.Getenv("OPENAI_ORG_ID"),
+		feedback: make(map[string]*ToolFeedback),
 	}
+}
+
+// UpdateToolFeedback records a tool execution result (C.4.4 learning feedback).
+func (c *Client) UpdateToolFeedback(tool string, success bool, duration time.Duration) {
+	c.feedbackMu.Lock()
+	defer c.feedbackMu.Unlock()
+
+	if c.feedback == nil {
+		c.feedback = make(map[string]*ToolFeedback)
+	}
+
+	fb := c.feedback[tool]
+	if fb == nil {
+		fb = &ToolFeedback{Tool: tool}
+		c.feedback[tool] = fb
+	}
+
+	if success {
+		fb.SuccessCount++
+	} else {
+		fb.FailureCount++
+	}
+
+	total := fb.SuccessCount + fb.FailureCount
+	if total > 0 {
+		// Running average
+		prev := fb.AvgTime * time.Duration(total-1)
+		fb.AvgTime = (prev + duration) / time.Duration(total)
+	}
+	fb.LastUsed = time.Now()
+}
+
+// GetToolFeedback returns the recorded feedback for a tool.
+func (c *Client) GetToolFeedback(tool string) *ToolFeedback {
+	c.feedbackMu.Lock()
+	defer c.feedbackMu.Unlock()
+	return c.feedback[tool]
+}
+
+// GetPreferredTools reorders the given tools by historical success rate
+// (best performers first, unknowns in the middle, known-bad tools last).
+// Used by the adaptive loop to prefer tools that have worked before.
+func (c *Client) GetPreferredTools(tools []string) []string {
+	c.feedbackMu.Lock()
+	defer c.feedbackMu.Unlock()
+
+	type scoredTool struct {
+		name  string
+		score float64
+	}
+
+	scored := make([]scoredTool, 0, len(tools))
+	for _, t := range tools {
+		score := 0.5 // neutral for tools with no history
+		if fb := c.feedback[t]; fb != nil {
+			if total := fb.SuccessCount + fb.FailureCount; total > 0 {
+				score = float64(fb.SuccessCount) / float64(total)
+			}
+		}
+		scored = append(scored, scoredTool{name: t, score: score})
+	}
+
+	sort.SliceStable(scored, func(i, j int) bool {
+		return scored[i].score > scored[j].score
+	})
+
+	ordered := make([]string, len(scored))
+	for i, s := range scored {
+		ordered[i] = s.name
+	}
+	return ordered
 }
 
 // AnalyzeToolOutput analyzes security tool output and returns next-step recommendations
 func (c *Client) AnalyzeToolOutput(ctx context.Context, toolName string, output string, objective string) (*AgentDecision, error) {
 	if c.apiKey == "" {
 		return &AgentDecision{
-			Analysis:        "(AI disabled - no API key)",
+			Analysis:         "(AI disabled - no API key)",
 			RecommendedTools: []string{},
-			Confidence:      0.0,
-			StopScan:        false,
+			Confidence:       0.0,
+			StopScan:         false,
 		}, nil
 	}
 
@@ -107,7 +194,7 @@ For each vulnerability, provide:
 - impact: potential business impact
 - tool_source: %s
 
-Return as JSON array. If no vulnerabilities found, return empty array.`, 
+Return as JSON array. If no vulnerabilities found, return empty array.`,
 		toolName, truncateOutput(output, 2000), toolName)
 
 	resp, err := c.callOpenAIRaw(ctx, prompt)
@@ -201,7 +288,7 @@ func (c *Client) mockOpenAIResponse(prompt string) (string, error) {
   "reasoning": "Starting with DNS discovery (dig), subdomain enumeration (subfinder), and network scanning (nmap) for comprehensive reconnaissance"
 }`, nil
 	}
-	
+
 	if strings.Contains(strings.ToLower(prompt), "analyze") || strings.Contains(strings.ToLower(prompt), "decision") {
 		// Analysis/decision response
 		return `{
@@ -213,7 +300,7 @@ func (c *Client) mockOpenAIResponse(prompt string) (string, error) {
   "stop_scan": false
 }`, nil
 	}
-	
+
 	if strings.Contains(strings.ToLower(prompt), "vulnerab") || strings.Contains(strings.ToLower(prompt), "extract") {
 		// Vulnerability extraction
 		return `[
@@ -233,7 +320,7 @@ func (c *Client) mockOpenAIResponse(prompt string) (string, error) {
   }
 ]`, nil
 	}
-	
+
 	// Default response
 	return `{
   "analysis": "Tool output received and processed",
@@ -274,13 +361,13 @@ func DefaultToolsForType(scanType string) []string {
 // ToModelsDecision converts AgentDecision to models.Finding for storage
 func (d *AgentDecision) ToFinding() models.Finding {
 	return models.Finding{
-		ID:        "",
-		ScanID:    "",
-		ToolName:  "ai-analysis",
-		Severity:  "INFO",
-		Title:     "AI Analysis",
+		ID:          "",
+		ScanID:      "",
+		ToolName:    "ai-analysis",
+		Severity:    "INFO",
+		Title:       "AI Analysis",
 		Description: d.Analysis,
-		Evidence: fmt.Sprintf("Recommended tools: %v\nReasoning: %s\nConfidence: %.2f", d.RecommendedTools, d.Reasoning, d.Confidence),
-		Timestamp: time.Now(),
+		Evidence:    fmt.Sprintf("Recommended tools: %v\nReasoning: %s\nConfidence: %.2f", d.RecommendedTools, d.Reasoning, d.Confidence),
+		Timestamp:   time.Now(),
 	}
 }

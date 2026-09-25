@@ -28,13 +28,13 @@ type Step struct {
 
 // Playbook represents a complete penetration test playbook
 type Playbook struct {
-	Name        string                    `yaml:"name"`
-	Description string                    `yaml:"description,omitempty"`
-	Author      string                    `yaml:"author,omitempty"`
-	Version     string                    `yaml:"version,omitempty"`
-	EntryPhase  PhaseType                 `yaml:"entry_phase"`
-	Phases      map[PhaseType][]Step      `yaml:"-"` // populated by loader
-	StepMap     map[string]*Step          `yaml:"-"` // step_id -> step
+	Name        string               `yaml:"name"`
+	Description string               `yaml:"description,omitempty"`
+	Author      string               `yaml:"author,omitempty"`
+	Version     string               `yaml:"version,omitempty"`
+	EntryPhase  PhaseType            `yaml:"entry_phase"`
+	Phases      map[PhaseType][]Step `yaml:"-"` // populated by loader
+	StepMap     map[string]*Step     `yaml:"-"` // step_id -> step
 }
 
 // ExecutionContext holds execution state during playbook run
@@ -42,16 +42,16 @@ type ExecutionContext struct {
 	PlaybookName string
 	Target       string
 	ScanID       string
-	Results      []models.ToolOutput           // all tool outputs
-	Conditions   map[string]interface{}        // evaluated conditions for branching
+	Results      []models.ToolOutput    // all tool outputs
+	Conditions   map[string]interface{} // evaluated conditions for branching
 	CurrentPhase PhaseType
 	StepResults  map[string]*models.ToolOutput // step_id -> output
-	
+
 	// AI-specific fields for agentic loop
-	IsAgentic    bool                      // true if using AI decision-making
-	AIObjective  string                    // what the scan is trying to achieve
-	AIDecisions  map[string]string         // step_id -> AI decision
-	AIReasonings map[string]string         // step_id -> AI reasoning
+	IsAgentic    bool              // true if using AI decision-making
+	AIObjective  string            // what the scan is trying to achieve
+	AIDecisions  map[string]string // step_id -> AI decision
+	AIReasonings map[string]string // step_id -> AI reasoning
 }
 
 // NewPlaybook creates a new playbook

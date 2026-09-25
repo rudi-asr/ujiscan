@@ -2,13 +2,12 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
 
@@ -46,8 +45,8 @@ func NewScannerAgent(executor *tools.Executor) *ScannerAgent {
 
 // Execute runs a nuclei scan according to task params:
 //
-//	params.target      (required) — URL or host to scan
-//	params.templates   (optional) — custom nuclei template path
+//	params.target (required) — URL or host to scan
+//	params.args    (optional) — extra nuclei CLI arguments
 func (s *ScannerAgent) Execute(ctx context.Context, task *Task) (interface{}, error) {
 	if err := s.Validate(task); err != nil {
 		return nil, err
@@ -58,22 +57,17 @@ func (s *ScannerAgent) Execute(ctx context.Context, task *Task) (interface{}, er
 		target = getStringParam(task.Params, "target_url")
 	}
 
-	// Ensure nuclei is actually available before queuing work
-	cfg := s.executor.GetToolConfig("nuclei")
-	if cfg == nil || !cfg.Available {
-		return nil, errors.New("nuclei tool not available on this host")
+	// Ensure nuclei is actually registered before queuing work
+	if _, ok := s.executor.ListTools()["nuclei"]; !ok {
+		return nil, errors.New("nuclei tool not registered on this host")
 	}
 
 	start := time.Now()
 
-	var out *models.ToolOutput
-	var err error
-	if templates := getStringParam(task.Params, "templates"); templates != "" {
-		out, err = s.executor.ScanWithNucleiCustom(target, templates)
-	} else {
-		out, err = s.executor.ScanWithNuclei(target)
-	}
-
+	out, err := s.executor.Execute(ctx, "nuclei", map[string]string{
+		"target": target,
+		"args":   getStringParam(task.Params, "args"),
+	})
 	if err != nil {
 		s.recordFailure(start)
 		return nil, fmt.Errorf("nuclei scan failed: %w", err)
@@ -82,8 +76,17 @@ func (s *ScannerAgent) Execute(ctx context.Context, task *Task) (interface{}, er
 		s.recordFailure(start)
 		return nil, ctx.Err()
 	}
+	if out == nil || !out.Success {
+		s.recordFailure(start)
+		return nil, fmt.Errorf("nuclei failed (exit=%d)", func() int {
+			if out != nil {
+				return out.ExitCode
+			}
+			return -1
+		}())
+	}
 
-	vulns := parseNucleiJSONL(out.Stdout)
+	vulns := parseNucleiText(out.Stdout)
 
 	result := &ScanResult{
 		Target:          target,
@@ -116,43 +119,40 @@ func (s *ScannerAgent) Stop() error {
 	return nil
 }
 
-// --- nuclei JSONL parsing ---
+// --- nuclei text output parsing ---
 
-type nucleiLine struct {
-	TemplateID string `json:"template-id"`
-	Type       string `json:"type"`
-	MatchedAt  string `json:"matched-at"`
-	Host       string `json:"host"`
-	Info       struct {
-		Name     string `json:"name"`
-		Severity string `json:"severity"`
-	} `json:"info"`
-}
+// nucleiMatchRe matches nuclei's default console lines:
+//
+//	[template-name] [severity] name [matched-at]
+var nucleiMatchRe = regexp.MustCompile(`^\[([^\]]+)\]\s*\[([^\]]+)\]\s*(.+?)(?:\s*\[(http[^\]]*)\])?\s*$`)
 
-// parseNucleiJSONL parses nuclei -jsonl output (one JSON object per line).
-// Malformed lines are skipped; a malformed stream yields an empty slice.
-func parseNucleiJSONL(data string) []VulnResult {
+// parseNucleiText parses nuclei's human-readable output. Malformed lines are
+// skipped; a match without a severity tag defaults to info.
+func parseNucleiText(output string) []VulnResult {
 	var results []VulnResult
-	for _, line := range strings.Split(data, "\n") {
-		line = strings.TrimSpace(line)
+
+	for _, raw := range strings.Split(output, "\n") {
+		line := strings.TrimSpace(raw)
 		if line == "" {
 			continue
 		}
-		var nl nucleiLine
-		if err := json.Unmarshal([]byte(line), &nl); err != nil {
+		m := nucleiMatchRe.FindStringSubmatch(line)
+		if m == nil {
 			continue
 		}
-		if nl.Info.Name == "" {
-			continue
+		severity := normalizeSeverity(m[2])
+		if severity == "" {
+			severity = "info"
 		}
 		results = append(results, VulnResult{
-			TemplateID: nl.TemplateID,
-			Type:       nl.Type,
-			Name:       nl.Info.Name,
-			Severity:   nl.Info.Severity,
-			MatchedAt:  nl.MatchedAt,
-			Host:       nl.Host,
+			TemplateID: m[1],
+			Type:       "",
+			Name:       strings.TrimSpace(m[3]),
+			Severity:   severity,
+			MatchedAt:  strings.TrimSpace(m[4]),
+			Host:       "",
 		})
 	}
+
 	return results
 }

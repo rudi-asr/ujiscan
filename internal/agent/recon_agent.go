@@ -2,13 +2,13 @@ package agent
 
 import (
 	"context"
-	"encoding/xml"
 	"errors"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
 
@@ -71,19 +71,22 @@ func (r *ReconnaissanceAgent) Execute(ctx context.Context, task *Task) (interfac
 		scanType = "full"
 	}
 
-	start := time.Now()
-
-	var out *models.ToolOutput
-	var err error
+	var args string
 	switch scanType {
 	case "quick":
-		out, err = r.executor.QuickNmapScan(target)
+		args = "-F"
 	case "ping":
-		out, err = r.executor.NmapPingDiscovery(target)
+		args = "-sn"
 	default:
-		out, err = r.executor.ScanWithNmap(target)
+		args = "-sV -p-"
 	}
 
+	start := time.Now()
+
+	out, err := r.executor.Execute(ctx, "nmap", map[string]string{
+		"target": target,
+		"args":   args,
+	})
 	if err != nil {
 		r.recordFailure(start)
 		return nil, fmt.Errorf("recon scan failed: %w", err)
@@ -92,12 +95,16 @@ func (r *ReconnaissanceAgent) Execute(ctx context.Context, task *Task) (interfac
 		r.recordFailure(start)
 		return nil, ctx.Err()
 	}
-	if out.ExitCode != 0 {
+	if out == nil || !out.Success {
 		r.recordFailure(start)
-		return nil, fmt.Errorf("nmap exited %d: %s", out.ExitCode, strings.TrimSpace(out.Stderr))
+		stderr := ""
+		if out != nil {
+			stderr = strings.TrimSpace(out.Stderr)
+		}
+		return nil, fmt.Errorf("nmap failed: %s", stderr)
 	}
 
-	hosts := parseNmapXML(out.Stdout)
+	hosts := parseNmapText(out.Stdout)
 
 	result := &ReconResult{
 		Target:   target,
@@ -130,90 +137,116 @@ func (r *ReconnaissanceAgent) Stop() error {
 	return nil
 }
 
-// --- nmap XML parsing (nmap -oX output) ---
+// --- nmap text output parsing (default nmap stdout) ---
 
-type nmapRun struct {
-	XMLName xml.Name   `xml:"nmaprun"`
-	Hosts   []nmapHost `xml:"host"`
-}
+var (
+	nmapReportRe = regexp.MustCompile(`(?m)^Nmap scan report for (\S+)\s*(?:\(([^)]+)\))?`)
+	portLineRe   = regexp.MustCompile(`^(\d+)/(tcp|udp|sctp)\s+(\w+)\s+(\S*)?\s*(.*)$`)
+	osLineRe     = regexp.MustCompile(`(?i)^(?:Running|OS details|OS CPE):\s*(.+)$`)
+)
 
-type nmapHost struct {
-	Status  nmapStatus   `xml:"status"`
-	Address nmapAddress  `xml:"address"`
-	Host    nmapHostname `xml:"hostnames>hostname"`
-	OS      nmapOS       `xml:"os>osmatch"`
-	Ports   []nmapPort   `xml:"ports>port"`
-}
+// parseNmapText converts nmap's human-readable output into HostResult
+// structures. It is lenient: hosts with no data are skipped and malformed
+// lines are ignored.
+func parseNmapText(output string) []HostResult {
+	lines := strings.Split(output, "\n")
+	var hosts []HostResult
+	var current *HostResult
 
-type nmapStatus struct {
-	State string `xml:"state,attr"`
-}
-
-type nmapAddress struct {
-	Addr string `xml:"addr,attr"`
-}
-
-type nmapHostname struct {
-	Name string `xml:"name,attr"`
-}
-
-type nmapOS struct {
-	Name string `xml:"name,attr"`
-}
-
-type nmapPort struct {
-	PortID   int           `xml:"portid,attr"`
-	Protocol string        `xml:"protocol,attr"`
-	State    nmapPortState `xml:"state"`
-	Service  nmapService   `xml:"service"`
-}
-
-type nmapPortState struct {
-	State string `xml:"state,attr"`
-}
-
-type nmapService struct {
-	Name    string `xml:"name,attr"`
-	Product string `xml:"product,attr"`
-	Version string `xml:"version,attr"`
-}
-
-// parseNmapXML converts nmap XML output into HostResult structures.
-// It is lenient: hosts with no data are skipped, malformed XML yields an
-// empty result rather than an error (the raw stdout is still in the task log).
-func parseNmapXML(xmlData string) []HostResult {
-	var run nmapRun
-	if err := xml.Unmarshal([]byte(xmlData), &run); err != nil {
-		return []HostResult{}
+	flush := func() {
+		if current != nil {
+			hosts = append(hosts, *current)
+			current = nil
+		}
 	}
 
-	hosts := make([]HostResult, 0, len(run.Hosts))
-	for _, h := range run.Hosts {
-		hr := HostResult{
-			IP:    h.Address.Addr,
-			Host:  h.Host.Name,
-			State: h.Status.State,
-			OS:    h.OS.Name,
-			Ports: make([]ServiceResult, 0, len(h.Ports)),
-		}
-		if hr.IP == "" {
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+
+		if m := nmapReportRe.FindStringSubmatch(line); m != nil {
+			flush()
+			// "Nmap scan report for hostname (ip)" or "for ip"
+			ip := m[1]
+			hostname := ""
+			if !isIP(m[1]) {
+				hostname = m[1]
+				if m[2] != "" && isIP(m[2]) {
+					ip = m[2]
+				}
+			}
+			current = &HostResult{IP: ip, Host: hostname, State: "up", Ports: []ServiceResult{}}
 			continue
 		}
-		for _, p := range h.Ports {
-			if p.State.State != "open" {
-				continue
-			}
-			hr.Ports = append(hr.Ports, ServiceResult{
-				Port:     p.PortID,
-				Protocol: p.Protocol,
-				State:    p.State.State,
-				Service:  p.Service.Name,
-				Product:  p.Service.Product,
-				Version:  p.Service.Version,
-			})
+
+		if current == nil {
+			continue
 		}
-		hosts = append(hosts, hr)
+
+		if m := portLineRe.FindStringSubmatch(line); m != nil {
+			port, _ := strconv.Atoi(m[1])
+			parts := strings.Fields(m[4] + " " + m[5])
+			service, product, version := "", "", ""
+			if len(parts) > 0 {
+				service = parts[0]
+			}
+			if len(parts) > 1 {
+				product = parts[1]
+			}
+			if len(parts) > 2 {
+				version = strings.Join(parts[2:], " ")
+			}
+			if m[3] == "open" {
+				current.Ports = append(current.Ports, ServiceResult{
+					Port:     port,
+					Protocol: m[2],
+					State:    m[3],
+					Service:  service,
+					Product:  product,
+					Version:  version,
+				})
+			}
+			continue
+		}
+
+		if m := osLineRe.FindStringSubmatch(line); m != nil && current.OS == "" {
+			current.OS = guessOS(m[1])
+		}
 	}
 
+	flush()
 	return hosts
+}
+
+// isIP reports whether s looks like an IPv4 address.
+func isIP(s string) bool {
+	parts := strings.Split(s, ".")
+	if len(parts) != 4 {
+		return false
+	}
+	for _, p := range parts {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 0 || n > 255 {
+			return false
+		}
+	}
+	return true
+}
+
+// guessOS extracts a coarse OS family from an nmap OS line.
+func guessOS(s string) string {
+	low := strings.ToLower(s)
+	switch {
+	case strings.Contains(low, "windows"):
+		return "Windows"
+	case strings.Contains(low, "linux"):
+		return "Linux"
+	case strings.Contains(low, "freebsd"), strings.Contains(low, "openbsd"), strings.Contains(low, "netbsd"):
+		return "BSD"
+	case strings.Contains(low, "mac"), strings.Contains(low, "darwin"):
+		return "macOS"
+	case strings.Contains(low, "solaris"):
+		return "Solaris"
+	default:
+		return strings.TrimSpace(s)
+	}
 }

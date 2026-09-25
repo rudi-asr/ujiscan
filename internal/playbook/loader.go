@@ -25,9 +25,9 @@ func NewPlaybookLoader(playbooksDir string) *PlaybookLoader {
 func (pl *PlaybookLoader) LoadPlaybook(name string) (*Playbook, error) {
 	// Find playbook file
 	path := filepath.Join(pl.playbooksDir, name+".md")
-	
+
 	fmt.Printf("Loading playbook from: %s\n", path)
-	
+
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read playbook file %s: %w", path, err)
@@ -128,13 +128,13 @@ func parsePlaybookPhases(content string, pb *Playbook) error {
 				pb.AddStep(currentPhase, *currentStep)
 				currentStep = nil
 			}
-		
+
 			phaseName := strings.TrimPrefix(line, "## ")
 			newPhase := PhaseType(strings.ToLower(strings.TrimSpace(phaseName)))
 			fmt.Printf("[parser] Found phase header: %s → %s\n", phaseName, newPhase)
 			currentPhase = newPhase
-			if currentPhase != PhaseRecon && currentPhase != PhaseEnum && 
-				currentPhase != PhaseExploit && currentPhase != PhaseVerify && 
+			if currentPhase != PhaseRecon && currentPhase != PhaseEnum &&
+				currentPhase != PhaseExploit && currentPhase != PhaseVerify &&
 				currentPhase != PhaseReport {
 				// Unknown phase, skip
 				fmt.Printf("[parser] Phase %s unknown, skipping\n", currentPhase)

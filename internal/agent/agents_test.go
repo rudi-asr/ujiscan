@@ -4,30 +4,19 @@ import (
 	"testing"
 )
 
-// --- Recon XML parsing ---
+// --- Recon text parsing ---
 
-func TestParseNmapXML(t *testing.T) {
-	xmlData := `<?xml version="1.0"?>
-<nmaprun scanner="nmap" version="7.99">
-  <host>
-    <status state="up" reason="syn-ack"/>
-    <address addr="127.0.0.1" addrtype="ipv4"/>
-    <hostnames><hostname name="localhost" type="PTR"/></hostnames>
-    <os><osmatch name="Linux 2.6.32" accuracy="98"/></os>
-    <ports>
-      <port protocol="tcp" portid="22">
-        <state state="open" reason="syn-ack"/>
-        <service name="ssh" product="OpenSSH" version="9.0"/>
-      </port>
-      <port protocol="tcp" portid="80">
-        <state state="closed" reason="reset"/>
-        <service name="http"/>
-      </port>
-    </ports>
-  </host>
-</nmaprun>`
+func TestParseNmapText(t *testing.T) {
+	text := `Starting Nmap 7.99 ( https://nmap.org ) at 2026-09-25 10:00 WIB
+Nmap scan report for 127.0.0.1
+Host is up (0.0012s latency).
+PORT     STATE  SERVICE VERSION
+22/tcp   open   ssh     OpenSSH 9.0 (protocol 2.0)
+80/tcp   closed http
+MAC Address: 00:11:22:33:44:55 (Unknown)
+Nmap done: 1 IP address (1 host up) scanned in 1.20 seconds`
 
-	hosts := parseNmapXML(xmlData)
+	hosts := parseNmapText(text)
 	if len(hosts) != 1 {
 		t.Fatalf("expected 1 host, got %d", len(hosts))
 	}
@@ -38,33 +27,51 @@ func TestParseNmapXML(t *testing.T) {
 	if len(h.Ports) != 1 { // only open ports retained
 		t.Fatalf("expected 1 open port, got %d", len(h.Ports))
 	}
-	if h.Ports[0].Service != "ssh" || h.Ports[0].Version != "9.0" {
+	if h.Ports[0].Service != "ssh" || h.Ports[0].Version != "9.0 (protocol 2.0)" {
 		t.Errorf("unexpected service info: %+v", h.Ports[0])
 	}
 }
 
-func TestParseNmapXMLMalformed(t *testing.T) {
-	hosts := parseNmapXML("<not-xml>")
-	if hosts == nil || len(hosts) != 0 {
-		t.Fatalf("expected empty result for malformed XML, got %v", hosts)
+func TestParseNmapTextHostnameIP(t *testing.T) {
+	text := `Nmap scan report for example.com (93.184.216.34)
+Host is up.
+PORT     STATE SERVICE
+443/tcp  open  https`
+
+	hosts := parseNmapText(text)
+	if len(hosts) != 1 {
+		t.Fatalf("expected 1 host, got %d", len(hosts))
+	}
+	if hosts[0].IP != "93.184.216.34" {
+		t.Errorf("expected resolved IP, got %q", hosts[0].IP)
+	}
+	if hosts[0].Host != "example.com" {
+		t.Errorf("expected hostname example.com, got %q", hosts[0].Host)
 	}
 }
 
-// --- Nuclei JSONL parsing ---
+func TestParseNmapTextMalformed(t *testing.T) {
+	hosts := parseNmapText("no nmap output here")
+	if len(hosts) != 0 {
+		t.Fatalf("expected empty result for malformed output, got %v", hosts)
+	}
+}
 
-func TestParseNucleiJSONL(t *testing.T) {
-	data := `{"template-id":"xss-test","type":"http","matched-at":"http://127.0.0.1/","host":"127.0.0.1","info":{"name":"Reflected XSS","severity":"high"}}
+// --- Nuclei text parsing ---
+
+func TestParseNucleiText(t *testing.T) {
+	data := `[http-vuln-cve2021-44228] [critical] Apache Log4j RCE
 garbage-line
-{"template-id":"sql-test","type":"http","matched-at":"http://127.0.0.1/search","info":{"name":"SQL Injection","severity":"critical"}}`
+[http-xss] [high] Reflected XSS [http://127.0.0.1/search?q=]`
 
-	vulns := parseNucleiJSONL(data)
+	vulns := parseNucleiText(data)
 	if len(vulns) != 2 {
 		t.Fatalf("expected 2 valid vulns (garbage skipped), got %d", len(vulns))
 	}
-	if vulns[0].Name != "Reflected XSS" || vulns[0].Severity != "high" {
+	if vulns[0].Name != "Apache Log4j RCE" || vulns[0].Severity != "critical" {
 		t.Errorf("unexpected first vuln: %+v", vulns[0])
 	}
-	if vulns[1].TemplateID != "sql-test" {
+	if vulns[1].TemplateID != "http-xss" || vulns[1].MatchedAt != "http://127.0.0.1/search?q=" {
 		t.Errorf("unexpected second vuln: %+v", vulns[1])
 	}
 }

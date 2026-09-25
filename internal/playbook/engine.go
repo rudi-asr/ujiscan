@@ -19,7 +19,7 @@ type Engine struct {
 	loader    *PlaybookLoader
 	scanStore *store.ScanStore
 	executor  *tools.Executor
-	aiClient  *ai.Client  // AI client for agentic mode
+	aiClient  *ai.Client // AI client for agentic mode
 }
 
 // NewEngine creates a new playbook engine
@@ -43,12 +43,12 @@ func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, targ
 func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target string) error {
 	logFile, _ := os.OpenFile("/tmp/ujiscan_playbook.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer logFile.Close()
-	
+
 	log := func(msg string) {
 		fmt.Fprintf(logFile, "%s\n", msg)
 		fmt.Fprint(logFile, msg+"\n")
 	}
-	
+
 	// Load playbook
 	log(fmt.Sprintf("[playbook] Loading playbook: %s for scan %s", playbookName, scanID))
 	log(fmt.Sprintf("[playbook] CWD: %s", os.Getenv("PWD")))
@@ -86,14 +86,14 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 	for i, res := range ctx.Results {
 		fmt.Printf("[handler]   [%d] tool=%s, success=%v, stdout_len=%d\n", i, res.ToolName, res.Success, len(res.Stdout))
 	}
-	
+
 	for i, result := range ctx.Results {
 		fmt.Printf("[handler] Storing result %d: tool=%s, success=%v\n", i, result.ToolName, result.Success)
 		err := e.scanStore.AddResult(scanID, result)
 		if err != nil {
 			fmt.Printf("[handler] ERROR storing result %d: %v\n", i, err)
 		}
-		
+
 		// Parse output to extract findings
 		findings := parser.ParseToolOutput(&result, scanID)
 		for _, finding := range findings {
@@ -114,7 +114,7 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 func (e *Engine) executePhase(pb *Playbook, ctx *ExecutionContext, phase PhaseType) error {
 	ctx.CurrentPhase = phase
 	steps := pb.GetPhaseSteps(phase)
-	
+
 	fmt.Printf("[%s] Executing phase %s with %d steps\n", ctx.PlaybookName, phase, len(steps))
 	for i, step := range steps {
 		fmt.Printf("[%s]  Step %d: %s (tool=%s)\n", ctx.PlaybookName, i, step.ID, step.Tool)

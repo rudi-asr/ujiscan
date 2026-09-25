@@ -6,15 +6,15 @@ import "time"
 type AIProvider string
 
 const (
-	ProviderClaude    AIProvider = "claude"
-	ProviderOpenAI    AIProvider = "openai"
-	ProviderDeepSeek  AIProvider = "deepseek"
-	ProviderOpenCode  AIProvider = "opencode-zen"
+	ProviderClaude   AIProvider = "claude"
+	ProviderOpenAI   AIProvider = "openai"
+	ProviderDeepSeek AIProvider = "deepseek"
+	ProviderOpenCode AIProvider = "opencode-zen"
 )
 
 // Message represents a chat message
 type Message struct {
-	Role    string `json:"role"`    // "user", "assistant"
+	Role    string `json:"role"` // "user", "assistant"
 	Content string `json:"content"`
 }
 
@@ -48,11 +48,11 @@ type AnalysisResponse struct {
 
 // FindingEnrichmentRequest is sent to AI for enrichment
 type FindingEnrichmentRequest struct {
-	FindingType   string                 `json:"finding_type"`
-	Description   string                 `json:"description"`
-	Evidence      string                 `json:"evidence,omitempty"`
-	Target        string                 `json:"target"`
-	Context       map[string]interface{} `json:"context,omitempty"`
+	FindingType string                 `json:"finding_type"`
+	Description string                 `json:"description"`
+	Evidence    string                 `json:"evidence,omitempty"`
+	Target      string                 `json:"target"`
+	Context     map[string]interface{} `json:"context,omitempty"`
 }
 
 // FindingEnrichment is AI-enriched finding data
@@ -75,6 +75,6 @@ type AIConfig struct {
 	Model       string     `json:"model"`
 	APIKey      string     `json:"api_key"`
 	Endpoint    string     `json:"endpoint,omitempty"`
-	Temperature float64   `json:"temperature"`
+	Temperature float64    `json:"temperature"`
 	MaxTokens   int        `json:"max_tokens"`
 }

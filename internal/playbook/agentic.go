@@ -3,6 +3,7 @@ package playbook
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rudi-asr/ujiscan/internal/ai"
 	"github.com/rudi-asr/ujiscan/internal/models"
@@ -22,7 +23,9 @@ func NewAgenticExecutor(engine *Engine) *AgenticExecutor {
 	}
 }
 
-// ExecuteAgenticScan runs full agentic scanning workflow
+// ExecuteAgenticScan runs full agentic scanning workflow with the
+// C.4 adaptive execution loop: phase-wise parallel execution, result
+// aggregation, AI-driven continue/stop decisions, and learning feedback.
 func (ae *AgenticExecutor) ExecuteAgenticScan(ctx context.Context, scanID string, target string, scanType string) error {
 	fmt.Printf("[agentic] Starting agentic scan for %s (type=%s, scan_id=%s)\n", target, scanType, scanID)
 
@@ -35,54 +38,69 @@ func (ae *AgenticExecutor) ExecuteAgenticScan(ctx context.Context, scanID string
 	}
 	fmt.Printf("[agentic] AI recommended tools: %v\n", selectedTools)
 
-	// Phase 2: Execute reconnaissance phase
-	fmt.Printf("[agentic] Phase 2: Executing reconnaissance tools\n")
-	reconResults := ae.executeToolsPhase(ctx, scanID, "recon", selectedTools)
-	fmt.Printf("[agentic] Recon phase completed: %d results\n", len(reconResults))
+	// Adaptive loop over phases (C.4): recon → enum → exploit
+	phaseSequence := []string{"recon", "enum", "exploit"}
+	lastDecision := &ai.AgentDecision{RecommendedTools: selectedTools}
+	totalFindings := 0
 
-	// Phase 3: AI analyzes recon and recommends enumeration tools
-	fmt.Printf("[agentic] Phase 3: AI analysis of reconnaissance findings\n")
-	enumDecision, err := ae.analyzePhaseResults(ctx, reconResults, "recon", target)
-	if err != nil {
-		fmt.Printf("[agentic] Analysis failed: %v\n", err)
-		enumDecision = &ai.AgentDecision{
-			RecommendedTools: ai.DefaultToolsForType("enum"),
-			StopScan:         false,
+	for _, phase := range phaseSequence {
+		tools := ae.aiClient.GetPreferredTools(lastDecision.RecommendedTools)
+		if len(tools) == 0 {
+			tools = ai.DefaultToolsForType(phase)
 		}
-	}
 
-	if enumDecision.StopScan {
-		fmt.Printf("[agentic] AI recommended stopping scan after recon\n")
-		ae.engine.scanStore.UpdateScanStatus(scanID, models.ScanStatusCompleted)
-		return nil
-	}
-
-	// Phase 4: Execute enumeration phase
-	fmt.Printf("[agentic] Phase 4: Executing enumeration tools\n")
-	enumResults := ae.executeToolsPhase(ctx, scanID, "enum", enumDecision.RecommendedTools)
-	fmt.Printf("[agentic] Enum phase completed: %d results\n", len(enumResults))
-
-	// Phase 5: AI analyzes enum results
-	fmt.Printf("[agentic] Phase 5: AI analysis of enumeration findings\n")
-	exploitDecision, err := ae.analyzePhaseResults(ctx, enumResults, "enum", target)
-	if err != nil {
-		exploitDecision = &ai.AgentDecision{
-			RecommendedTools: ai.DefaultToolsForType("exploit"),
-			StopScan:         false,
+		// Findings before this phase (to compute the phase delta)
+		findingsBefore := totalFindings
+		if scan, err := ae.engine.scanStore.GetScan(scanID); err == nil {
+			findingsBefore = len(scan.Findings)
 		}
+
+		// C.4.3: parallel execution with per-tool timeout
+		fmt.Printf("[agentic] Phase %s: executing %d tools in parallel\n", phase, len(tools))
+		phaseStart := time.Now()
+		results := ae.ExecuteToolsPhaseParallel(ctx, scanID, phase, target, tools)
+		phaseElapsed := time.Since(phaseStart)
+
+		// Findings after this phase
+		if scan, err := ae.engine.scanStore.GetScan(scanID); err == nil {
+			totalFindings = len(scan.Findings)
+		}
+
+		// C.4.1: aggregate phase results
+		phaseResults := ae.AggregatePhaseResults(phase, tools, results, phaseElapsed, totalFindings-findingsBefore)
+		fmt.Printf("[agentic] Phase %s done: %d results, +%d findings, %.1fs\n",
+			phase, phaseResults.TotalResults, phaseResults.FindingsCount, phaseElapsed.Seconds())
+
+		// C.4.4: learning feedback from tool outcomes
+		for _, outcome := range phaseResults.ToolOutcomes {
+			ae.aiClient.UpdateToolFeedback(outcome.Tool, outcome.Success, outcome.Duration)
+		}
+
+		// AI analyzes phase results and recommends next steps
+		decision, err := ae.analyzePhaseResults(ctx, results, phase, target)
+		if err != nil {
+			fmt.Printf("[agentic] Analysis failed: %v\n", err)
+			decision = &ai.AgentDecision{
+				RecommendedTools: ai.DefaultToolsForType(nextPhaseAfter(phase)),
+				Confidence:       0.5,
+				StopScan:         false,
+			}
+		}
+		lastDecision = decision
+
+		// C.4.2: decide whether to continue to the next phase
+		if !ae.ShouldContinueToPhase(phaseResults, decision, totalFindings) {
+			fmt.Printf("[agentic] Adaptive loop stopping after %s phase\n", phase)
+			break
+		}
+		fmt.Printf("[agentic] Continuing to next phase (confidence=%.2f, tools=%v)\n",
+			decision.Confidence, decision.RecommendedTools)
 	}
 
-	// Phase 6: Execute exploitation/specialized tools if recommended
-	if !exploitDecision.StopScan && len(exploitDecision.RecommendedTools) > 0 {
-		fmt.Printf("[agentic] Phase 6: Executing exploitation tools\n")
-		exploitResults := ae.executeToolsPhase(ctx, scanID, "exploit", exploitDecision.RecommendedTools)
-		fmt.Printf("[agentic] Exploit phase completed: %d results\n", len(exploitResults))
-	}
-
-	// Phase 7: AI generates final report
-	fmt.Printf("[agentic] Phase 7: Generating final AI report\n")
+	// Final phase: AI generates final report
+	fmt.Printf("[agentic] Generating final AI report\n")
 	finalReport := ae.generateFinalReport(ctx, scanID, target)
-	fmt.Printf("[agentic] Final report: %s\n", finalReport)
+	fmt.Printf("[agentic] Final report:\n%s\n", finalReport)
 
 	// Mark scan complete
 	ae.engine.scanStore.UpdateScanStatus(scanID, models.ScanStatusCompleted)
@@ -91,45 +109,16 @@ func (ae *AgenticExecutor) ExecuteAgenticScan(ctx context.Context, scanID string
 	return nil
 }
 
-// executeToolsPhase runs a set of tools and captures results
-func (ae *AgenticExecutor) executeToolsPhase(ctx context.Context, scanID string, phase string, tools []string) []models.ToolOutput {
-	var results []models.ToolOutput
-
-	fmt.Printf("[agentic] Executing %d tools in %s phase: %v\n", len(tools), phase, tools)
-
-	for _, toolName := range tools {
-		// Execute tool via executor (target is scanme.nmap.org)
-		fmt.Printf("[agentic] Executing %s...\n", toolName)
-		
-		params := map[string]string{
-			"target": "scanme.nmap.org",
-		}
-		
-		output, err := ae.engine.executor.Execute(ctx, toolName, params)
-		if err != nil {
-			fmt.Printf("[agentic] ⚠️  Tool %s failed: %v\n", toolName, err)
-			continue
-		}
-
-		// Store result
-		toolOutput := models.ToolOutput{
-			ToolName: toolName,
-			Stdout:   output.Stdout,
-			Stderr:   output.Stderr,
-			ExitCode: output.ExitCode,
-		}
-
-		results = append(results, toolOutput)
-
-		// Store in scan
-		if err := ae.engine.scanStore.AddResult(scanID, toolOutput); err != nil {
-			fmt.Printf("[agentic] Failed to store result: %v\n", err)
-		}
-
-		fmt.Printf("[agentic] ✓ %s completed (exit=%d, stdout=%d bytes)\n", toolName, output.ExitCode, len(output.Stdout))
+// nextPhaseAfter returns the default tool-set name for the phase following `phase`.
+func nextPhaseAfter(phase string) string {
+	switch phase {
+	case "recon":
+		return "enum"
+	case "enum":
+		return "exploit"
+	default:
+		return "enum"
 	}
-
-	return results
 }
 
 // analyzePhaseResults asks AI what to do next based on phase results

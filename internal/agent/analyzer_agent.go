@@ -156,7 +156,7 @@ func (a *AnalyzerAgent) enrichWithClaude(ctx context.Context, findings []*Analyz
 		"title, description, severity (info|low|medium|high|critical), cvss (string), " +
 		"cwe, remediation. Findings: " + string(payload)
 
-	resp, err := a.ai.Chat([]ai.Message{
+	resp, err := a.ai.Chat(ctx, []ai.Message{
 		{Role: "user", Content: prompt},
 	})
 	if err != nil {
