@@ -297,3 +297,46 @@ func (s *MemoryCommentStore) DeleteComment(id string) error {
 
 	return fmt.Errorf("comment not found")
 }
+
+// RestoreEngagements replaces all stored engagements (used by persistence load)
+func (s *MemoryEngagementStore) RestoreEngagements(engs []*Engagement) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.engagements = make(map[string]*Engagement, len(engs))
+	for _, eng := range engs {
+		if eng != nil {
+			s.engagements[eng.ID] = eng
+		}
+	}
+	return nil
+}
+
+// RestoreFindings replaces all stored findings (used by persistence load)
+func (s *MemoryFindingStore) RestoreFindings(findings []*Finding) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.findings = make(map[string]*Finding, len(findings))
+	for _, f := range findings {
+		if f != nil {
+			s.findings[f.ID] = f
+		}
+	}
+	return nil
+}
+
+// RestoreComments replaces all stored comments grouped by finding (used by persistence load)
+func (s *MemoryCommentStore) RestoreComments(comments []*FindingComment) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.comments = make(map[string][]*FindingComment)
+	for _, c := range comments {
+		if c == nil {
+			continue
+		}
+		s.comments[c.FindingID] = append(s.comments[c.FindingID], c)
+	}
+	return nil
+}

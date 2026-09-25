@@ -116,6 +116,7 @@ type EngagementStore interface {
 	ListEngagements() ([]*Engagement, error)
 	ListEngagementsByUser(userID string) ([]*Engagement, error)
 	ListEngagementsByStatus(status EngagementStatus) ([]*Engagement, error)
+	RestoreEngagements(engs []*Engagement) error
 }
 
 // FindingStore provides finding persistence
@@ -128,6 +129,7 @@ type FindingStore interface {
 	ListFindingsByEngagement(engagementID string) ([]*Finding, error)
 	ListFindingsByStatus(status FindingStatus) ([]*Finding, error)
 	ListFindingsByScan(scanID string) ([]*Finding, error)
+	RestoreFindings(findings []*Finding) error
 }
 
 // CommentStore provides comment persistence
@@ -135,6 +137,7 @@ type CommentStore interface {
 	AddComment(comment *FindingComment) error
 	GetComments(findingID string) ([]*FindingComment, error)
 	DeleteComment(id string) error
+	RestoreComments(comments []*FindingComment) error
 }
 
 // EngagementService provides business logic for engagements

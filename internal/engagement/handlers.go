@@ -4,8 +4,12 @@ package engagement
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
+
+	"github.com/rudi-asr/ujiscan/internal/auth"
+	"github.com/rudi-asr/ujiscan/internal/persistence"
 )
 
 // Handler provides HTTP handlers for engagement endpoints
@@ -14,6 +18,7 @@ type Handler struct {
 	engStore   EngagementStore
 	findStore  FindingStore
 	commStore  CommentStore
+	pm         *persistence.PersistenceManager
 }
 
 // NewHandler creates a new engagement handler
@@ -23,6 +28,21 @@ func NewHandler(engService *EngagementService, engStore EngagementStore, findSto
 		engStore:   engStore,
 		findStore:  findStore,
 		commStore:  commStore,
+	}
+}
+
+// SetPersistence attaches the persistence manager so mutations can be saved
+func (h *Handler) SetPersistence(pm *persistence.PersistenceManager) {
+	h.pm = pm
+}
+
+// saveState persists the current engagement state after any mutation
+func (h *Handler) saveState() {
+	if h.pm == nil {
+		return
+	}
+	if err := SaveState(h.pm, h.engStore, h.findStore, h.commStore); err != nil {
+		log.Printf("⚠️ Failed to persist engagement state: %v", err)
 	}
 }
 
@@ -38,9 +58,15 @@ type CreateEngagementRequest struct {
 }
 
 // HandleCreateEngagement handles POST /api/engagements
-func (h *Handler) HandleCreateEngagement(w http.ResponseWriter, r *http.Request, userID string) {
+func (h *Handler) HandleCreateEngagement(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := auth.GetUserID(r)
+	if userID == "" {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -66,6 +92,8 @@ func (h *Handler) HandleCreateEngagement(w http.ResponseWriter, r *http.Request,
 		http.Error(w, fmt.Sprintf("failed to create engagement: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -144,6 +172,8 @@ func (h *Handler) HandleUpdateEngagement(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	h.saveState()
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(eng)
 }
@@ -170,6 +200,8 @@ func (h *Handler) HandleAssignPentester(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
+	h.saveState()
+
 	eng, _ := h.engStore.GetEngagement(engagementID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(eng)
@@ -187,6 +219,8 @@ func (h *Handler) HandleActivateEngagement(w http.ResponseWriter, r *http.Reques
 		http.Error(w, fmt.Sprintf("failed to activate engagement: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	eng, _ := h.engStore.GetEngagement(engagementID)
 	w.Header().Set("Content-Type", "application/json")
@@ -206,23 +240,33 @@ func (h *Handler) HandleCompleteEngagement(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	h.saveState()
+
 	eng, _ := h.engStore.GetEngagement(engagementID)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(eng)
 }
 
 // HandleSignOffEngagement handles POST /api/engagements/{id}/signoff
-func (h *Handler) HandleSignOffEngagement(w http.ResponseWriter, r *http.Request, engagementID, userID string) {
+func (h *Handler) HandleSignOffEngagement(w http.ResponseWriter, r *http.Request, engagementID string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	err := h.engService.SignOffEngagement(engagementID, userID)
+	claims := auth.GetClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err := h.engService.SignOffEngagement(engagementID, claims.UserID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to sign off engagement: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	eng, _ := h.engStore.GetEngagement(engagementID)
 	w.Header().Set("Content-Type", "application/json")
@@ -268,9 +312,15 @@ func (h *Handler) HandleGetFinding(w http.ResponseWriter, r *http.Request, findi
 }
 
 // HandleAddComment handles POST /api/findings/{id}/comments
-func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request, findingID, userID, userEmail, userName string) {
+func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request, findingID string) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.GetClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -283,11 +333,13 @@ func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request, findi
 		return
 	}
 
-	comment, err := h.engService.AddCommentToFinding(findingID, userID, userName, userEmail, req.Text)
+	comment, err := h.engService.AddCommentToFinding(findingID, claims.UserID, claims.Name, claims.Email, req.Text)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to add comment: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -295,17 +347,25 @@ func (h *Handler) HandleAddComment(w http.ResponseWriter, r *http.Request, findi
 }
 
 // HandleMarkFindingAsVerified handles PUT /api/findings/{id}/verify
-func (h *Handler) HandleMarkFindingAsVerified(w http.ResponseWriter, r *http.Request, findingID, userID, userName string) {
+func (h *Handler) HandleMarkFindingAsVerified(w http.ResponseWriter, r *http.Request, findingID string) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	err := h.engService.MarkFindingAsVerified(findingID, userID, userName)
+	claims := auth.GetClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err := h.engService.MarkFindingAsVerified(findingID, claims.UserID, claims.Name)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to verify finding: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	finding, _ := h.findStore.GetFinding(findingID)
 	w.Header().Set("Content-Type", "application/json")
@@ -313,9 +373,15 @@ func (h *Handler) HandleMarkFindingAsVerified(w http.ResponseWriter, r *http.Req
 }
 
 // HandleMarkFindingAsFalsePositive handles PUT /api/findings/{id}/false-positive
-func (h *Handler) HandleMarkFindingAsFalsePositive(w http.ResponseWriter, r *http.Request, findingID, userID, userName string) {
+func (h *Handler) HandleMarkFindingAsFalsePositive(w http.ResponseWriter, r *http.Request, findingID string) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	claims := auth.GetClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -328,11 +394,13 @@ func (h *Handler) HandleMarkFindingAsFalsePositive(w http.ResponseWriter, r *htt
 		return
 	}
 
-	err = h.engService.MarkFindingAsFalsePositive(findingID, userID, userName, req.Reason)
+	err = h.engService.MarkFindingAsFalsePositive(findingID, claims.UserID, claims.Name, req.Reason)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to mark as false positive: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	finding, _ := h.findStore.GetFinding(findingID)
 	w.Header().Set("Content-Type", "application/json")
@@ -340,17 +408,25 @@ func (h *Handler) HandleMarkFindingAsFalsePositive(w http.ResponseWriter, r *htt
 }
 
 // HandleApproveFinding handles PUT /api/findings/{id}/approve
-func (h *Handler) HandleApproveFinding(w http.ResponseWriter, r *http.Request, findingID, userID, userName string) {
+func (h *Handler) HandleApproveFinding(w http.ResponseWriter, r *http.Request, findingID string) {
 	if r.Method != http.MethodPut {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	err := h.engService.ApproveFinding(findingID, userID, userName)
+	claims := auth.GetClaims(r)
+	if claims == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	err := h.engService.ApproveFinding(findingID, claims.UserID, claims.Name)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("failed to approve finding: %v", err), http.StatusBadRequest)
 		return
 	}
+
+	h.saveState()
 
 	finding, _ := h.findStore.GetFinding(findingID)
 	w.Header().Set("Content-Type", "application/json")
