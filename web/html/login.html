@@ -268,7 +268,7 @@
                     successDiv.textContent = 'Login successful! Redirecting...';
                     successDiv.style.display = 'block';
                     setTimeout(() => {
-                        window.location.href = '/html/dashboard-team.html';
+                        window.location.href = 'dashboard-team.html';
                     }, 1000);
                 } else {
                     errorDiv.textContent = 'Invalid email or password';
@@ -283,7 +283,7 @@
         if (!auth.isLoggedIn()) {
             initPage();
         } else {
-            window.location.href = '/html/dashboard-team.html';
+            window.location.href = 'dashboard-team.html';
         }
     </script>
 </body>

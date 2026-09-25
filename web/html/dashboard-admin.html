@@ -378,7 +378,7 @@
                 document.getElementById('userBadge').textContent = `${user.email} (${user.role})`;
                 if (user.role !== 'admin') {
                     alert('Access denied: Admin role required');
-                    window.location.href = '/html/dashboard-team.html';
+                    window.location.href = 'dashboard-team.html';
                     return;
                 }
             }
@@ -531,7 +531,7 @@
         if (auth.isLoggedIn()) {
             initPage();
         } else {
-            window.location.href = '/html/login.html';
+            window.location.href = 'login.html';
         }
     </script>
 </body>

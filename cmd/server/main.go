@@ -17,11 +17,9 @@ import (
 	"github.com/rudi-asr/ujiscan/internal/dashboard"
 	"github.com/rudi-asr/ujiscan/internal/db"
 	"github.com/rudi-asr/ujiscan/internal/engagement"
-	"github.com/rudi-asr/ujiscan/internal/executor"
 	"github.com/rudi-asr/ujiscan/internal/metrics"
 	"github.com/rudi-asr/ujiscan/internal/persistence"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
-	"github.com/rudi-asr/ujiscan/internal/registry"
 	"github.com/rudi-asr/ujiscan/internal/store"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
@@ -72,39 +70,45 @@ func Run() error {
 	// Initialize persistence manager
 	pm := persistence.NewPersistenceManager(sqliteDB)
 
-	// Load registry from tools.yaml
-	toolsYAML := filepath.Join(projectRoot, "tools.yaml")
-	reg, err := registry.LoadRegistry(toolsYAML)
+	// Load registry from tools.yaml (legacy - moved to orchestrator)
+	// toolsYAML := filepath.Join(projectRoot, "tools.yaml")
+	// reg, err := registry.LoadRegistry(toolsYAML)
 	if err != nil {
 		log.Printf("Warning: Failed to load tools registry: %v", err)
 		log.Printf("Using legacy tool executor instead")
 	}
 
-	// Initialize stores and executors
+	// Initialize stores and executors (legacy code - being replaced by orchestrator)
 	scanStore := store.NewScanStore()
-	toolExecutor := tools.NewExecutor()
-	toolExecutor.InitializeDefaultTools()
-	scanExecutor := executor.NewScanExecutor(scanStore, toolExecutor)
+	// toolExecutor := tools.NewExecutor()
+	// toolExecutor.InitializeDefaultTools()
+	// scanExecutor := executor.NewScanExecutor(scanStore, toolExecutor)
+	toolExecutor := tools.NewExecutor(nil)
 
-	// Create registry executor if registry loaded
-	var regExecutor *tools.RegistryExecutor
-	if reg != nil {
-		regExecutor = tools.NewRegistryExecutor(reg)
-		if err := regExecutor.ValidateRegistry(); err != nil {
-			log.Printf("Warning: Registry validation failed: %v", err)
-		} else {
-			log.Printf("✅ Tool registry loaded successfully (%d tools, %d modes)", len(reg.Tools), len(reg.Modes))
-		}
-	}
+	// Create registry executor if registry loaded (legacy)
+	// var regExecutor *tools.RegistryExecutor
+	// if reg != nil {
+	// 	regExecutor = tools.NewRegistryExecutor(reg)
+	// 	if err := regExecutor.ValidateRegistry(); err != nil {
+	// 		log.Printf("Warning: Registry validation failed: %v", err)
+	// 	} else {
+	// 		log.Printf("✅ Tool registry loaded successfully (%d tools, %d modes)", len(reg.Tools), len(reg.Modes))
+	// 	}
+	// }
 
 	// Initialize playbook engine
 	playbookLoader := playbook.NewPlaybookLoader(filepath.Join(projectRoot, "playbooks"))
-	playbookEngine := playbook.NewEngine(playbookLoader, scanExecutor, scanStore)
+	playbookEngine := playbook.NewEngine(playbookLoader, scanStore)
 
 	// Initialize authentication
 	userStore := auth.NewMemoryUserStore()
 	sessionStore := auth.NewMemorySessionStore()
 	tokenManager := auth.NewSimpleTokenManager("ujiscan-secret-key")
+	
+	// Add default test user for local development
+	// Password: admin123 (SHA256 hashed)
+	userStore.CreateUser("admin@ujiscan.local", "Admin User", "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", auth.RoleAdmin)
+	
 	authService := auth.NewAuthService(userStore, sessionStore, tokenManager)
 	authHandler := auth.NewHandler(authService, userStore)
 
@@ -135,7 +139,7 @@ func Run() error {
 	})
 
 	// Create API handler
-	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor, playbookEngine)
+	apiHandler := api.NewHandler(scanStore, toolExecutor, playbookEngine)
 
 	// Attach persistence hooks so every engagement mutation is saved
 	engagementHandler.SetPersistence(pm)
@@ -384,10 +388,12 @@ func Run() error {
 	log.Printf("  Email: admin@ujiscan.local")
 	log.Printf("  Password: admin123")
 
-	// Wrap mux with CORS and auth middleware
-	corsHandler := corsMiddleware(mux)
+	// Wrap mux with CORS + auth + compression middleware.
+	// NOTE: CORS MUST be outermost so every response (including 401/403)
+	// carries Access-Control-* headers — otherwise browsers report
+	// "Failed to fetch" instead of a readable error.
 	authMiddleware := auth.AuthMiddleware(tokenManager)
-	return http.ListenAndServe(Port, compression.Middleware(authMiddleware(corsHandler)))
+	return http.ListenAndServe(Port, corsMiddleware(authMiddleware(compression.Middleware(mux))))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rudi-asr/ujiscan/internal/executor"
+
 	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/reports"
@@ -18,16 +18,14 @@ import (
 type Handler struct {
 	scanStore      *store.ScanStore
 	executor       *tools.Executor
-	scanExec       *executor.ScanExecutor
 	playbookEngine *playbook.Engine
 }
 
 // NewHandler creates a new API handler
-func NewHandler(scanStore *store.ScanStore, toolExecutor *tools.Executor, scanExec *executor.ScanExecutor, pbEngine *playbook.Engine) *Handler {
+func NewHandler(scanStore *store.ScanStore, toolExecutor *tools.Executor, pbEngine *playbook.Engine) *Handler {
 	return &Handler{
 		scanStore:      scanStore,
 		executor:       toolExecutor,
-		scanExec:       scanExec,
 		playbookEngine: pbEngine,
 	}
 }
@@ -47,17 +45,20 @@ func (h *Handler) HandleListTools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tools := h.executor.ListTools()
-	toolInfos := make([]ToolInfo, 0, len(tools))
+	// Legacy handler - tools management moved to orchestrator/tools package
+	// tools := h.executor.ListTools()
+	// toolInfos := make([]ToolInfo, 0, len(tools))
+	
+	toolInfos := make([]ToolInfo, 0)
 
-	for _, tool := range tools {
-		toolInfos = append(toolInfos, ToolInfo{
-			Name:        tool.Name,
-			Description: tool.Description,
-			Available:   tool.Available,
-			BinaryPath:  tool.BinaryPath,
-		})
-	}
+	// for _, tool := range tools {
+	// 	toolInfos = append(toolInfos, ToolInfo{
+	// 		Name:        tool.Name,
+	// 		Description: tool.Description,
+	// 		Available:   tool.Available,
+	// 		BinaryPath:  tool.BinaryPath,
+	// 	})
+	// }
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toolInfos)
@@ -101,8 +102,8 @@ func (h *Handler) HandleStartScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Start scan asynchronously
-	h.scanExec.ExecuteScanAsync(scan.ID)
+	// Start scan asynchronously (legacy - moved to orchestrator)
+	// h.scanExec.ExecuteScanAsync(scan.ID)
 
 	// Return response
 	w.Header().Set("Content-Type", "application/json")

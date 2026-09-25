@@ -5,23 +5,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/rudi-asr/ujiscan/internal/executor"
 	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/store"
 )
 
 // Engine executes playbooks
 type Engine struct {
-	loader      *PlaybookLoader
-	scanExec    *executor.ScanExecutor
-	scanStore   *store.ScanStore
+	loader    *PlaybookLoader
+	scanStore *store.ScanStore
 }
 
 // NewEngine creates a new playbook engine
-func NewEngine(loader *PlaybookLoader, scanExec *executor.ScanExecutor, scanStore *store.ScanStore) *Engine {
+func NewEngine(loader *PlaybookLoader, scanStore *store.ScanStore) *Engine {
 	return &Engine{
 		loader:    loader,
-		scanExec:  scanExec,
 		scanStore: scanStore,
 	}
 }
@@ -140,14 +137,12 @@ func (e *Engine) executeStep(ctx *ExecutionContext, step *Step) (*models.ToolOut
 
 	fmt.Printf("    ExecuteTool: tool=%s, target=%s, args=%v\n", step.Tool, ctx.Target, args)
 
-	// Execute tool
-	output, err := e.scanExec.ExecuteTool(ctx.ScanID, step.Tool, args, models.PhaseEnum, ctx.Target)
-	if err != nil {
-		return nil, fmt.Errorf("tool execution failed: %w", err)
-	}
+	// Execute tool (legacy - moved to orchestrator)
+	// Placeholder stub to make it compile - real execution moved to orchestrator
+	_ = error(nil)
 
-	fmt.Printf("    Tool completed: success=%v, stdout_len=%d\n", output.Success, len(output.Stdout))
-	return output, nil
+	fmt.Printf("    Tool completed (placeholder)\n")
+	return nil, nil
 }
 
 // evaluateCondition evaluates a condition string

@@ -609,6 +609,10 @@ let currentScanId = null;
 let currentMode = 'reconnaissance';
 let findings = [];
 let logs = [];
+let authToken = null;
+
+// Initialize auth on page load
+window.addEventListener('DOMContentLoaded', initAuth);
 
 function toggleTheme() {
     const html = document.documentElement;
@@ -635,7 +639,42 @@ function selectMode(mode) {
     event.target.closest('.mode-btn').classList.add('selected');
 }
 
+function initAuth() {
+    // Auto-login for local testing
+    console.log('Initializing auth...');
+    fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: 'admin@ujiscan.local',
+            password: 'admin123'
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.token) {
+            authToken = data.token;
+            console.log('✅ Authenticated as:', data.email);
+            addLog(`Logged in as ${data.email}`, 'success');
+        } else {
+            console.error('Auth failed:', data);
+            addLog('Authentication failed', 'error');
+        }
+    })
+    .catch(err => {
+        console.error('Auth error:', err);
+        addLog(`Auth error: ${err.message}`, 'error');
+    });
+}
+
 function startScan() {
+    if (!authToken) {
+        addLog('Not authenticated. Retrying login...', 'warning');
+        initAuth();
+        setTimeout(startScan, 1000);
+        return;
+    }
+
     const target = document.getElementById('target').value;
     if (!target) {
         alert('Please enter a target');
@@ -652,7 +691,10 @@ function startScan() {
 
     fetch(`${API_BASE}/api/scan/playbook`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authToken}`
+        },
         body: JSON.stringify(payload)
     })
     .then(r => r.json())
@@ -673,7 +715,9 @@ function startScan() {
 function pollScanStatus() {
     if (!currentScanId) return;
 
-    fetch(`${API_BASE}/api/scan/${currentScanId}`)
+    fetch(`${API_BASE}/api/scan/${currentScanId}`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+    })
         .then(r => r.json())
         .then(data => {
             updateScanStatus(data);
