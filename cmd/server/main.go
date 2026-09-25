@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	// _ "github.com/mattn/go-sqlite3" // Disabled: requires CGO, using in-memory store instead
 
+	"github.com/rudi-asr/ujiscan/internal/agent"
 	"github.com/rudi-asr/ujiscan/internal/api"
 	"github.com/rudi-asr/ujiscan/internal/audit"
 	"github.com/rudi-asr/ujiscan/internal/auth"
@@ -121,6 +123,16 @@ func Run() error {
 
 	// Attach persistence hooks so every engagement mutation is saved
 	engagementHandler.SetPersistence(pm)
+
+	// Phase B: agent manager (task queue + workers + agents)
+	agentManager := agent.NewManager(4, 1000)
+	_ = agentManager.RegisterAgent(agent.AgentTypeReconnaissance, agent.NewReconnaissanceAgent(toolExecutor))
+	_ = agentManager.RegisterAgent(agent.AgentTypeScanner, agent.NewScannerAgent(toolExecutor))
+	_ = agentManager.RegisterAgent(agent.AgentTypeAnalyzer, agent.NewAnalyzerAgent(nil))
+	agentHandler := agent.NewHandler(agentManager)
+	if err := agentManager.Start(context.Background()); err != nil {
+		log.Printf("⚠️ Agent manager failed to start: %v", err)
+	}
 
 	// Routes
 	mux := http.NewServeMux()
@@ -261,6 +273,22 @@ func Run() error {
 	mux.HandleFunc("/api/notifications", requireAuth(dashboardHandler.HandleGetNotifications))
 	mux.HandleFunc("PUT /api/notifications/{id}/read", requireAuth(dashboardHandler.HandleMarkNotificationAsRead))
 	mux.HandleFunc("DELETE /api/notifications/{id}", requireAuth(dashboardHandler.HandleDeleteNotification))
+
+	// Phase B agent routes
+	mux.HandleFunc("POST /api/agents/submit", requireAuth(agentHandler.HandleSubmit))
+	mux.HandleFunc("GET /api/agents/status", requireAuth(agentHandler.HandleStatus))
+	mux.HandleFunc("GET /api/agents/tasks", requireAuth(agentHandler.HandleListTasks))
+	mux.HandleFunc("GET /api/agents/tasks/{id}/wait", requireAuth(agentHandler.HandleWaitTask))
+	mux.HandleFunc("/api/agents/tasks/{id}", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			agentHandler.HandleGetTask(w, r)
+		case http.MethodDelete:
+			agentHandler.HandleCancelTask(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	}))
 
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
