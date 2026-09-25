@@ -830,24 +830,43 @@ function displayResults(scan) {
     const results = document.getElementById('scanResults');
     let html = '<h3>Tool Results</h3>';
     
+    console.log('displayResults called with:', scan);
+    console.log('Results array:', scan.results);
+    
     if (scan.results && scan.results.length > 0) {
         scan.results.forEach((result, i) => {
+            const argsStr = result.args ? result.args.join(', ') : 'N/A';
+            const stdoutPreview = result.stdout ? `<pre style="background: var(--bg); padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.85em; max-height: 200px; overflow-y: auto;">${escapeHtml(result.stdout.substring(0, 800))}</pre>` : '<p style="opacity: 0.5;">No output captured</p>';
+            
             html += `
-                <div class="card" style="margin-bottom: 10px;">
-                    <h4>${i + 1}. ${result.tool_name}</h4>
-                    <p><strong>Exit Code:</strong> ${result.exit_code}</p>
-                    <p><strong>Duration:</strong> ${(result.duration_ms / 1000).toFixed(1)}s</p>
-                    <p><strong>Command:</strong> ${result.command}</p>
-                    <p><strong>Args:</strong> ${result.args.join(', ')}</p>
-                    ${result.stdout ? `<pre style="background: var(--bg); padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">${result.stdout.substring(0, 500)}</pre>` : ''}
+                <div class="card" style="margin-bottom: 10px; border: 1px solid var(--border); padding: 15px; border-radius: 4px;">
+                    <h4 style="margin-top: 0;">✅ ${i + 1}. ${result.tool_name}</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                        <p><strong>Status:</strong> ${result.success ? '✅ Success' : '❌ Failed'}</p>
+                        <p><strong>Exit Code:</strong> ${result.exit_code}</p>
+                        <p><strong>Duration:</strong> ${result.duration_ms}ms</p>
+                        <p><strong>Target:</strong> ${result.target}</p>
+                    </div>
+                    ${result.command ? `<p><strong>Command:</strong> <code>${escapeHtml(result.command)}</code></p>` : ''}
+                    ${result.args && result.args.length > 0 ? `<p><strong>Args:</strong> <code>${escapeHtml(argsStr)}</code></p>` : ''}
+                    <div><strong>Output:</strong></div>
+                    ${stdoutPreview}
                 </div>
             `;
         });
+        console.log('Rendered results:', html);
     } else {
         html += '<p style="opacity: 0.7;">No results available</p>';
     }
     
     results.innerHTML = html;
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function loadTools() {
