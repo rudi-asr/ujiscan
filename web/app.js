@@ -2,7 +2,9 @@
 // ujiscan Frontend API Client + Auth Manager
 // ============================================================================
 
-const API_BASE = 'http://localhost:8081';
+// Detect environment
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_BASE = isLocalhost ? 'http://localhost:8081' : 'https://eds-barrel-entity-sponsor.trycloudflare.com';
 
 // ============================================================================
 // 1. AUTH MANAGEMENT
