@@ -10,70 +10,58 @@ entry_phase: "recon"
 
 ### dig-lookup
 Tool: dig
-Args: [+short {target}]
+Args: []
 Description: Perform DNS lookup
 Condition: ""
 
 ### subfinder-subdomain-discovery
 Tool: subfinder
-Args: [-d {target} -json]
+Args: [-json]
 Description: Discover subdomains
 Condition: ""
 
 ### nmap-ping-discovery
 Tool: nmap
-Args: [-sn -oJ - {target}]
+Args: [-sn -oJ -]
 Description: Discover live hosts using ping scan
-Condition: ""
-
-### httpx-http-probing
-Tool: httpx
-Args: [-json {target}]
-Description: Probe HTTP services
 Condition: ""
 
 ## enum
 
+### httpx-http-probing
+Tool: httpx
+Args: []
+Description: Probe HTTP services
+Condition: ""
+
 ### nmap-port-scan
 Tool: nmap
-Args: [-p 22,80,443,3306,5432,6379,27017,8080,8443,8000,5000,3000 -sV -sC -oJ - {target}]
+Args: [-p 22,80,443,3306,5432,6379,27017,8080,8443,8000,5000,3000 -sV -sC -oJ -]
 Description: Comprehensive port scan with service detection
 Condition: ""
 
 ### whatweb-fingerprinting
 Tool: whatweb
-Args: [--color=never --log-json=- {target}]
+Args: []
 Description: Web technology fingerprinting
-Condition: ports_open
+Condition: ""
 
 ### sslscan-ssl-audit
 Tool: sslscan
-Args: [--no-failed {target}]
+Args: []
 Description: SSL/TLS certificate and configuration audit
-Condition: ports_open
+Condition: ""
 
-## scan
+## exploit
 
 ### nuclei-vuln-scan
 Tool: nuclei
-Args: [-u {target} -json -severity high,critical]
+Args: [-json]
 Description: Scan for vulnerabilities with nuclei
-Condition: ports_open
-
-### gobuster-dir-brute
-Tool: gobuster
-Args: [dir -u http://{target} -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -q]
-Description: Brute-force web directories
 Condition: ""
 
 ### nikto-web-scan
 Tool: nikto
-Args: [-h {target} -Format JSON]
-Description: Nikto web server vulnerability scan
-Condition: ports_open
-
-## exploit
-
-### (placeholder for manual exploit phase)
-Description: Manual exploitation steps would go here
-Condition: critical_vuln_found
+Args: []
+Description: Web server vulnerability scanning
+Condition: ""

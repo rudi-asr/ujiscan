@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/rudi-asr/ujiscan/internal/models"
+	"github.com/rudi-asr/ujiscan/internal/parser"
 	"github.com/rudi-asr/ujiscan/internal/store"
 	"github.com/rudi-asr/ujiscan/internal/tools"
 )
@@ -74,10 +75,17 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 	for i, result := range ctx.Results {
 		fmt.Printf("[handler] Storing result %d: tool=%s, success=%v\n", i, result.ToolName, result.Success)
 		e.scanStore.AddResult(scanID, result)
+		
+		// Parse output to extract findings
+		findings := parser.ParseToolOutput(&result, scanID)
+		for _, finding := range findings {
+			fmt.Printf("[handler] Found: %s (%s)\n", finding.Title, finding.Severity)
+			e.scanStore.AddFinding(scanID, finding)
+		}
 	}
 	fmt.Printf("[handler] Results stored. Fetching final scan...\n")
 	finalScan, _ := e.scanStore.GetScan(scanID)
-	fmt.Printf("[handler] Final scan has %d results\n", len(finalScan.Results))
+	fmt.Printf("[handler] Final scan has %d results and %d findings\n", len(finalScan.Results), len(finalScan.Findings))
 
 	// Mark as completed
 	e.scanStore.CompleteScan(scanID, nil)

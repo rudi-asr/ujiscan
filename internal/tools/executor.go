@@ -29,11 +29,13 @@ func (e *Executor) Execute(ctx context.Context, toolName string, params map[stri
 	}
 
 	// Get tool definition
+	fmt.Printf("[executor] Looking up tool: '%s'\n", toolName)
 	tool := e.registry.GetTool(toolName)
 	if tool == nil {
 		result.Error = fmt.Sprintf("Tool %s not found in registry", toolName)
 		return result, fmt.Errorf(result.Error)
 	}
+	fmt.Printf("[executor] Found tool, execute_template: '%s'\n", tool.ExecuteTemplate)
 
 	// Check if installed
 	if !e.registry.IsInstalled(toolName) {
@@ -53,6 +55,10 @@ func (e *Executor) Execute(ctx context.Context, toolName string, params map[stri
 	output, err := cmd.CombinedOutput()
 	result.Duration = int(time.Since(start).Seconds())
 
+	fmt.Printf("[executor] Command: %s\n", cmdStr)
+	fmt.Printf("[executor] Output length: %d bytes\n", len(output))
+	fmt.Printf("[executor] Output preview: %s\n", string(output)[:min(len(output), 100)])
+
 	if err != nil {
 		if ctx.Err() != nil {
 			result.Error = "Execution canceled"
@@ -71,6 +77,14 @@ func (e *Executor) Execute(ctx context.Context, toolName string, params map[stri
 	e.registry.UpdateLastUsed(toolName)
 
 	return result, nil
+}
+
+// min returns minimum of two ints
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // InstallTool installs a tool
@@ -120,11 +134,15 @@ func (e *Executor) VerifyTool(ctx context.Context, toolName string) error {
 
 // buildCommand substitutes parameters into execute template
 func (e *Executor) buildCommand(template string, params map[string]string) string {
+	fmt.Printf("[executor-build] Template: '%s'\n", template)
+	fmt.Printf("[executor-build] Params: %v\n", params)
 	cmd := template
 	for key, value := range params {
 		placeholder := "{{ " + key + " }}"
+		fmt.Printf("[executor-build] Replacing '%s' with '%s'\n", placeholder, value)
 		cmd = strings.ReplaceAll(cmd, placeholder, value)
 	}
+	fmt.Printf("[executor-build] Result: '%s'\n", cmd)
 	return cmd
 }
 

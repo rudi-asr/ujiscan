@@ -5,25 +5,25 @@ import "time"
 // Tool represents a security tool in the registry
 type Tool struct {
 	// Tool name (nmap, nuclei, etc)
-	Name string `json:"name"`
+	Name string `json:"name" yaml:"name"`
 	// Description
-	Description string `json:"description"`
+	Description string `json:"description" yaml:"description"`
 	// Category (recon, scanning, exploitation, etc)
-	Category string `json:"category"`
+	Category string `json:"category" yaml:"category"`
 	// Installation command
-	InstallCommand string `json:"install_command"`
+	InstallCommand string `json:"install_command" yaml:"install_command"`
 	// Command to verify installation
-	VerifyCommand string `json:"verify_command"`
+	VerifyCommand string `json:"verify_command" yaml:"verify_command"`
 	// How to execute the tool (with {{ params }})
-	ExecuteTemplate string `json:"execute_template"`
+	ExecuteTemplate string `json:"execute_template" yaml:"execute_template"`
 	// Supported platforms (macOS, linux, windows)
-	Platforms []string `json:"platforms"`
+	Platforms []string `json:"platforms" yaml:"platforms"`
 	// Version required
-	MinVersion string `json:"min_version"`
+	MinVersion string `json:"min_version" yaml:"min_version"`
 	// Parser strategy (nmap_xml, nuclei_json, etc)
-	ParserStrategy string `json:"parser_strategy"`
+	ParserStrategy string `json:"parser_strategy" yaml:"parser_strategy"`
 	// Tool-specific config
-	Config map[string]interface{} `json:"config,omitempty"`
+	Config map[string]interface{} `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
 // ToolCache represents cached tool installation state

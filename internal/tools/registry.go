@@ -41,14 +41,21 @@ func NewRegistry(toolsConfigPath string) (*Registry, error) {
 
 // loadToolsFromFile loads tool definitions from YAML file
 func (r *Registry) loadToolsFromFile(path string) error {
+	fmt.Printf("[registry] Loading tools from: %s\n", path)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("failed to read tools config: %w", err)
 	}
+	fmt.Printf("[registry] Read %d bytes from config\n", len(data))
 
 	registry := &ToolRegistry{}
 	if err := yaml.Unmarshal(data, registry); err != nil {
 		return fmt.Errorf("failed to parse tools config: %w", err)
+	}
+
+	fmt.Printf("[registry] Parsed %d tools from YAML\n", len(registry.Tools))
+	for name, tool := range registry.Tools {
+		fmt.Printf("[registry] Tool '%s': execute_template='%s'\n", name, tool.ExecuteTemplate)
 	}
 
 	r.tools = registry.Tools

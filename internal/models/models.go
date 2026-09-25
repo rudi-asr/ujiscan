@@ -34,6 +34,7 @@ type Scan struct {
 	StartedAt time.Time     `json:"started_at"`
 	EndedAt   *time.Time    `json:"ended_at,omitempty"`
 	Results   []ToolOutput  `json:"results"`
+	Findings  []Finding     `json:"findings"`      // Parsed findings from tools
 	Error     string        `json:"error,omitempty"`
 }
 
@@ -127,4 +128,53 @@ type LogEntry struct {
 	Message   string    `json:"message"`
 	ScanID    string    `json:"scan_id,omitempty"`
 	ToolName  string    `json:"tool_name,omitempty"`
+}
+
+// Severity levels for findings
+type Severity string
+
+const (
+	SeverityCritical Severity = "critical"
+	SeverityHigh     Severity = "high"
+	SeverityMedium   Severity = "medium"
+	SeverityLow      Severity = "low"
+	SeverityInfo     Severity = "info"
+)
+
+// FindingType categorizes the type of finding
+type FindingType string
+
+const (
+	FindingTypePort              FindingType = "port_open"
+	FindingTypeSubdomain         FindingType = "subdomain"
+	FindingTypeWeakSSL           FindingType = "weak_ssl"
+	FindingTypeDefaultCredential FindingType = "default_credential"
+	FindingTypeOutdatedService   FindingType = "outdated_service"
+	FindingTypeUnusualPort       FindingType = "unusual_port"
+	FindingTypeDNSRecord         FindingType = "dns_record"
+	FindingTypeHTTPHeader        FindingType = "http_header"
+	FindingTypeTechStack         FindingType = "tech_stack"
+	FindingTypeOther             FindingType = "other"
+)
+
+// Finding represents a security finding from tool outputs
+type Finding struct {
+	ID           string    `json:"id"`
+	ScanID       string    `json:"scan_id"`
+	ToolName     string    `json:"tool_name"`      // Source tool
+	FindingType  FindingType `json:"finding_type"`
+	Severity     Severity  `json:"severity"`
+	Title        string    `json:"title"`         // Short description
+	Description  string    `json:"description"`   // Detailed info
+	Evidence     string    `json:"evidence"`      // Raw data from tool
+	Remediation  string    `json:"remediation"`   // How to fix
+	Timestamp    time.Time `json:"timestamp"`
+	
+	// Structured data by type
+	Port         int       `json:"port,omitempty"`          // For port findings
+	Protocol     string    `json:"protocol,omitempty"`      // tcp/udp
+	Service      string    `json:"service,omitempty"`       // Service name
+	Version      string    `json:"version,omitempty"`       // Service version
+	Hostname     string    `json:"hostname,omitempty"`      // Domain/hostname
+	IPAddress    string    `json:"ip_address,omitempty"`    // IP address
 }

@@ -84,6 +84,20 @@ func (s *ScanStore) AddResult(id string, result models.ToolOutput) error {
 	return nil
 }
 
+// AddFinding adds a finding to a scan
+func (s *ScanStore) AddFinding(id string, finding models.Finding) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	scan, ok := s.scans[id]
+	if !ok {
+		return fmt.Errorf("scan %s not found", id)
+	}
+
+	scan.Findings = append(scan.Findings, finding)
+	return nil
+}
+
 // CompleteScan marks a scan as completed
 func (s *ScanStore) CompleteScan(id string, err error) error {
 	s.mu.Lock()
