@@ -284,6 +284,94 @@ func (e *Engine) updateNucleiConditions(ctx *ExecutionContext, output *models.To
 	}
 }
 
+// ExecuteQuickScanWithTools executes quick scan with user-selected tools from regular-scan
+func (e *Engine) ExecuteQuickScanWithTools(ctx context.Context, scanID string, target string, selectedTools []string) error {
+	if len(selectedTools) == 0 {
+		return fmt.Errorf("no tools selected for quick scan")
+	}
+
+	fmt.Printf("[engine] Quick scan with %d selected tools: %v\n", len(selectedTools), selectedTools)
+
+	// Load regular scan playbook as template
+	pb, err := e.loader.LoadPlaybook("regular-scan")
+	if err != nil {
+		return fmt.Errorf("failed to load regular-scan playbook: %w", err)
+	}
+
+	// Collect all steps from all phases that match selected tools
+	var allSteps []Step
+	for _, phase := range []PhaseType{PhaseRecon, PhaseEnum, PhaseExploit} {
+		if steps, exists := pb.Phases[phase]; exists {
+			for _, step := range steps {
+				// Check if tool matches selected
+				for _, selected := range selectedTools {
+					if strings.EqualFold(step.Tool, selected) || strings.Contains(strings.ToLower(step.ID), strings.ToLower(selected)) {
+						allSteps = append(allSteps, step)
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if len(allSteps) == 0 {
+		return fmt.Errorf("no matching tools found: %v", selectedTools)
+	}
+
+	fmt.Printf("[engine] Executing %d matching tools\n", len(allSteps))
+
+	// Update scan status
+	e.scanStore.UpdateScanStatus(scanID, models.ScanStatusRunning)
+
+	// Execute all matching steps
+	resultCount := 0
+	for _, step := range allSteps {
+		// Substitute target in args
+		args := make([]string, len(step.Args))
+		for i, arg := range step.Args {
+			args[i] = strings.ReplaceAll(arg, "{target}", target)
+		}
+
+		// Execute tool
+		execResult, err := e.executor.Execute(ctx, step.Tool, map[string]string{
+			"target": target,
+			"args":   strings.Join(args, " "),
+		})
+		if err != nil {
+			fmt.Printf("[engine] Tool %s error: %v\n", step.Tool, err)
+		}
+
+		// Convert ToolExecutionResult to ToolOutput
+		output := &models.ToolOutput{
+			ToolName:  execResult.ToolName,
+			Target:    target,
+			Success:   execResult.Success,
+			Stdout:    execResult.Stdout,
+			Stderr:    execResult.Stderr,
+			ExitCode:  execResult.ExitCode,
+			Error:     err.Error(),
+			Duration:  execResult.Duration * 1000,
+			StartedAt: time.Now(),
+			EndedAt:   time.Now(),
+		}
+
+		// Store result
+		e.scanStore.AddResult(scanID, *output)
+		resultCount++
+
+		// Parse findings if success
+		if execResult.Success {
+			findings := parser.ParseToolOutput(output, scanID)
+			for _, finding := range findings {
+				e.scanStore.AddFinding(scanID, finding)
+			}
+		}
+	}
+
+	fmt.Printf("[engine] Quick scan complete: %d results\n", resultCount)
+	return e.scanStore.CompleteScan(scanID, nil)
+}
+
 // ListPlaybooks returns all available playbooks
 func (e *Engine) ListPlaybooks() ([]*Playbook, error) {
 	return e.loader.LoadAllPlaybooks()

@@ -1,11 +1,11 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-
 
 	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
@@ -66,7 +66,9 @@ func (h *Handler) HandleListTools(w http.ResponseWriter, r *http.Request) {
 
 // ScanRequest represents a scan request
 type ScanRequest struct {
-	Target string `json:"target"`
+	Target   string   `json:"target"`
+	ScanType string   `json:"scanType"`   // "regular", "quick", "full-scan-ai"
+	Tools    []string `json:"tools"`      // For quick scan: user-selected tools subset
 }
 
 // ScanResponse represents a scan response
@@ -95,6 +97,11 @@ func (h *Handler) HandleStartScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Default to regular scan if scanType not specified
+	if strings.TrimSpace(req.ScanType) == "" {
+		req.ScanType = "regular"
+	}
+
 	// Create scan
 	scan, err := h.scanStore.CreateScan(req.Target)
 	if err != nil {
@@ -102,8 +109,40 @@ func (h *Handler) HandleStartScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Start scan asynchronously (legacy - moved to orchestrator)
-	// h.scanExec.ExecuteScanAsync(scan.ID)
+	// Route to appropriate executor based on scanType
+	go func() {
+		ctx := context.Background()
+		switch req.ScanType {
+		case "quick":
+			// Quick scan: user-selected tools from regular scan
+			if len(req.Tools) > 0 {
+				// Execute quick scan with user-selected tools
+				err := h.playbookEngine.ExecuteQuickScanWithTools(ctx, scan.ID, req.Target, req.Tools)
+				if err != nil {
+					h.scanStore.CompleteScan(scan.ID, err)
+				}
+			} else {
+				// No tools selected, use default quick scan (nmap only)
+				err := h.playbookEngine.ExecutePlaybook(scan.ID, "quick-scan", req.Target)
+				if err != nil {
+					h.scanStore.CompleteScan(scan.ID, err)
+				}
+			}
+		case "full-scan-ai":
+			// Full scan with AI orchestration
+			executor := playbook.NewAgenticExecutor(h.playbookEngine)
+			err := executor.ExecuteAgenticScan(ctx, scan.ID, req.Target, "comprehensive")
+			if err != nil {
+				h.scanStore.CompleteScan(scan.ID, err)
+			}
+		default:
+			// Regular scan: all tools from regular-scan playbook
+			err := h.playbookEngine.ExecutePlaybook(scan.ID, "regular-scan", req.Target)
+			if err != nil {
+				h.scanStore.CompleteScan(scan.ID, err)
+			}
+		}
+	}()
 
 	// Return response
 	w.Header().Set("Content-Type", "application/json")
