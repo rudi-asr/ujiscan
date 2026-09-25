@@ -41,10 +41,10 @@ func Run() error {
 	if dbPath == "" {
 		dbPath = filepath.Join(projectRoot, "ujiscan.db")
 	}
-	
+
 	log.Printf("⚠️  Running in in-memory mode (no SQLite). Data will not persist between restarts.")
 	log.Printf("✅ Using in-memory stores for scans, sessions, findings, etc.")
-	
+
 	// Initialize stores (already in-memory) without database
 	// Database would be used for persistence, but we'll skip it for now
 
@@ -81,11 +81,11 @@ func Run() error {
 	userStore := auth.NewMemoryUserStore()
 	sessionStore := auth.NewMemorySessionStore()
 	tokenManager := auth.NewSimpleTokenManager("ujiscan-secret-key")
-	
+
 	// Add default test user for local development
 	// Password: admin123 (SHA256 hashed)
 	userStore.CreateUser("admin@ujiscan.local", "Admin User", "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9", auth.RoleAdmin)
-	
+
 	authService := auth.NewAuthService(userStore, sessionStore, tokenManager)
 	authHandler := auth.NewHandler(authService, userStore)
 
