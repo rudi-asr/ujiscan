@@ -94,8 +94,18 @@ func (q *TaskQueue) Dequeue() *Task {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 
-	if len(q.queue) == 0 {
-		return nil
+	// Purge cancelled (terminated) tasks and skip to the next one
+	for {
+		if len(q.queue) == 0 {
+			return nil
+		}
+		task := q.queue[0]
+		if task.Status == StatusTerminated {
+			q.queue = q.queue[1:]
+			delete(q.tasks, task.ID)
+			continue
+		}
+		break
 	}
 
 	task := q.queue[0]
