@@ -1,25 +1,30 @@
 package playbook
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/store"
+	"github.com/rudi-asr/ujiscan/internal/tools"
 )
 
 // Engine executes playbooks
 type Engine struct {
 	loader    *PlaybookLoader
 	scanStore *store.ScanStore
+	executor  *tools.Executor
 }
 
 // NewEngine creates a new playbook engine
-func NewEngine(loader *PlaybookLoader, scanStore *store.ScanStore) *Engine {
+func NewEngine(loader *PlaybookLoader, scanStore *store.ScanStore, executor *tools.Executor) *Engine {
 	return &Engine{
 		loader:    loader,
 		scanStore: scanStore,
+		executor:  executor,
 	}
 }
 
@@ -65,8 +70,14 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 	}
 
 	// Store all results in scan
-	// (Note: ExecuteTool already stores results, so context results are duplicate)
-	// Just mark as completed
+	fmt.Printf("[handler] Storing %d results to scan %s\n", len(ctx.Results), scanID)
+	for i, result := range ctx.Results {
+		fmt.Printf("[handler] Storing result %d: tool=%s, success=%v\n", i, result.ToolName, result.Success)
+		e.scanStore.AddResult(scanID, result)
+	}
+	fmt.Printf("[handler] Results stored. Fetching final scan...\n")
+	finalScan, _ := e.scanStore.GetScan(scanID)
+	fmt.Printf("[handler] Final scan has %d results\n", len(finalScan.Results))
 
 	// Mark as completed
 	e.scanStore.CompleteScan(scanID, nil)
@@ -137,12 +148,44 @@ func (e *Engine) executeStep(ctx *ExecutionContext, step *Step) (*models.ToolOut
 
 	fmt.Printf("    ExecuteTool: tool=%s, target=%s, args=%v\n", step.Tool, ctx.Target, args)
 
-	// Execute tool (legacy - moved to orchestrator)
-	// Placeholder stub to make it compile - real execution moved to orchestrator
-	_ = error(nil)
+	// Execute tool using Executor
+	toolCtx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
 
-	fmt.Printf("    Tool completed (placeholder)\n")
-	return nil, nil
+	result, err := e.executor.Execute(toolCtx, step.Tool, map[string]string{
+		"target": ctx.Target,
+		"args":   strings.Join(args, " "),
+	})
+
+	startTime := time.Now()
+	if err != nil {
+		fmt.Printf("    Tool execution error: %v\n", err)
+		return &models.ToolOutput{
+			ToolName:  step.Tool,
+			Target:    ctx.Target,
+			Success:   false,
+			Error:     err.Error(),
+			StartedAt: startTime,
+			EndedAt:   time.Now(),
+		}, err
+	}
+
+	// Convert executor result to ToolOutput
+	output := &models.ToolOutput{
+		ToolName:  result.ToolName,
+		Target:    ctx.Target,
+		Success:   result.Success,
+		Stdout:    result.Stdout,
+		Stderr:    result.Stderr,
+		Error:     result.Error,
+		ExitCode:  result.ExitCode,
+		Duration:  result.Duration * 1000, // Convert seconds to milliseconds
+		StartedAt: startTime,
+		EndedAt:   time.Now(),
+	}
+
+	fmt.Printf("    Tool completed (success=%v, duration=%dms)\n", result.Success, output.Duration)
+	return output, nil
 }
 
 // evaluateCondition evaluates a condition string

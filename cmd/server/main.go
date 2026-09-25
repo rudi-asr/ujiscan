@@ -48,20 +48,19 @@ func Run() error {
 	// Initialize stores (already in-memory) without database
 	// Database would be used for persistence, but we'll skip it for now
 
-	// Load registry from tools.yaml (legacy - moved to orchestrator)
-	// toolsYAML := filepath.Join(projectRoot, "tools.yaml")
-	// reg, err := registry.LoadRegistry(toolsYAML)
+	// Load registry from tools.yaml
+	toolsYAMLPath := filepath.Join(projectRoot, "config", "tools.yaml")
+	reg, err := tools.NewRegistry(toolsYAMLPath)
 	if err != nil {
 		log.Printf("Warning: Failed to load tools registry: %v", err)
-		log.Printf("Using legacy tool executor instead")
+		reg, _ = tools.NewRegistry("") // Use default/empty
+	} else {
+		log.Printf("✅ Tool registry loaded from %s", toolsYAMLPath)
 	}
 
-	// Initialize stores and executors (legacy code - being replaced by orchestrator)
+	// Initialize stores and tool executor
 	scanStore := store.NewScanStore()
-	// toolExecutor := tools.NewExecutor()
-	// toolExecutor.InitializeDefaultTools()
-	// scanExecutor := executor.NewScanExecutor(scanStore, toolExecutor)
-	toolExecutor := tools.NewExecutor(nil)
+	toolExecutor := tools.NewExecutor(reg)
 
 	// Create registry executor if registry loaded (legacy)
 	// var regExecutor *tools.RegistryExecutor
@@ -76,7 +75,7 @@ func Run() error {
 
 	// Initialize playbook engine
 	playbookLoader := playbook.NewPlaybookLoader(filepath.Join(projectRoot, "playbooks"))
-	playbookEngine := playbook.NewEngine(playbookLoader, scanStore)
+	playbookEngine := playbook.NewEngine(playbookLoader, scanStore, toolExecutor)
 
 	// Initialize authentication
 	userStore := auth.NewMemoryUserStore()

@@ -195,8 +195,20 @@ func (h *Handler) HandlePlaybookScan(w http.ResponseWriter, r *http.Request) {
 		playbookFilename = "vulnerability-quick"
 	case "web-full-scan", "web server full scan", "web-server-full-scan":
 		playbookFilename = "web-full-scan"
+	case "quick-scan":
+		playbookFilename = "quick-scan"
+	case "regular-scan":
+		playbookFilename = "regular-scan"
+	case "full-scan-ai":
+		playbookFilename = "full-scan-ai"
 	default:
-		playbookFilename = req.Playbook
+		// Handle dynamic quick-scan patterns
+		if strings.HasPrefix(searchName, "quick-scan-") {
+			// Use regular-scan playbook for dynamic tool selection
+			playbookFilename = "regular-scan"
+		} else {
+			playbookFilename = req.Playbook
+		}
 	}
 
 	// Map request name to playbook filename is done above via switch.
