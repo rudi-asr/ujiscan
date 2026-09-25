@@ -1,9 +1,1 @@
-# Nmap 7.991 scan initiated Sat Sep 26 01:57:21 2026 as: nmap -p 22 -sV -sC -oJ 127.0.0.1 80 443 3306 5432 6379 27017 8080 8443 8000 5000 3000 -
-Nmap scan report for localhost (127.0.0.1)
-Host is up (0.000079s latency).
-
-PORT   STATE  SERVICE VERSION
-22/tcp closed ssh
-
-Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-# Nmap done at Sat Sep 26 01:57:26 2026 -- 12 IP addresses (1 host up) scanned in 5.01 seconds
+# Nmap 7.991 scan initiated Sat Sep 26 02:03:43 2026 as: nmap -p 22 -sV -sC -oJ mitracakra.digital 80 443 3306 5432 6379 27017 8080 8443 8000 5000 3000 -

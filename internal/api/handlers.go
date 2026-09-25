@@ -45,20 +45,18 @@ func (h *Handler) HandleListTools(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Legacy handler - tools management moved to orchestrator/tools package
-	// tools := h.executor.ListTools()
-	// toolInfos := make([]ToolInfo, 0, len(tools))
-	
-	toolInfos := make([]ToolInfo, 0)
-
-	// for _, tool := range tools {
-	// 	toolInfos = append(toolInfos, ToolInfo{
-	// 		Name:        tool.Name,
-	// 		Description: tool.Description,
-	// 		Available:   tool.Available,
-	// 		BinaryPath:  tool.BinaryPath,
-	// 	})
-	// }
+	// Return default hostedscan tools available in playbooks
+	toolInfos := []ToolInfo{
+		{Name: "dig", Description: "DNS lookup and enumeration", Available: true},
+		{Name: "subfinder", Description: "Subdomain enumeration", Available: true},
+		{Name: "nmap", Description: "Network mapping and port scanning", Available: true},
+		{Name: "httpx", Description: "HTTP probing and fingerprinting", Available: true},
+		{Name: "whatweb", Description: "Web technology identification", Available: true},
+		{Name: "sslscan", Description: "SSL/TLS security audit", Available: true},
+		{Name: "nuclei", Description: "Vulnerability scanning with templates", Available: true},
+		{Name: "gobuster", Description: "Directory and DNS brute force", Available: true},
+		{Name: "nikto", Description: "Web server vulnerability scanner", Available: true},
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(toolInfos)
