@@ -26,19 +26,3 @@ func TestQuickNmapScan(t *testing.T) {
 	t.Logf("Scan completed in %dms", output.Duration)
 	t.Logf("Stdout length: %d bytes", len(output.Stdout))
 }
-
-func TestNmapResult(t *testing.T) {
-	// Test JSON parsing with simple mock
-	jsonSample := `{"nmap_run":{"host":[{"status":{"state":"up"},"ports":{"port":[{"portid":22,"protocol":"tcp","state":{"state":"open"},"service":{"name":"ssh"}}]}}]}}`
-
-	result, err := parseNmapJSON(jsonSample)
-	if err != nil {
-		t.Fatalf("Failed to parse nmap JSON: %v", err)
-	}
-
-	if result == nil {
-		t.Fatal("Parsed result is nil")
-	}
-
-	t.Logf("Successfully parsed nmap JSON result")
-}

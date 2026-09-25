@@ -426,7 +426,7 @@ func (r *HTMLRenderer) renderFindings(report *Report) string {
                 <div class="remediation">
                     <h4>Remediation Steps:</h4>
                     <ul>
-`, i+1, f.Title, f.Severity, f.CWE, f.CVSSV3, f.Description, f.Impact)
+`, strings.ToLower(f.Severity), i+1, f.Title, f.Severity, f.CWE, f.CVSSV3, f.Description, f.Impact)
 
 		for _, step := range f.Remediation.Steps {
 			html += fmt.Sprintf(`                        <li>%s</li>

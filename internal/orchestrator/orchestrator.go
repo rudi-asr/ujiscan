@@ -171,7 +171,7 @@ func (o *Orchestrator) executePhaseWithRules(
 				o.logExecution(phaseID, nextToolID, target, "pending", 
 					"Rule-triggered execution", evaluation.MatchedRules[0].ID)
 
-				output, err := o.executor.RunTool(nextToolID, []string{target}, target, "")
+				_, err := o.executor.RunTool(nextToolID, []string{target}, target, "")
 				if err != nil {
 					o.logExecution(phaseID, nextToolID, target, "failed", 
 						err.Error(), evaluation.MatchedRules[0].ID)

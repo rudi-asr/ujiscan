@@ -58,7 +58,7 @@ func (s *Service) ProcessToolOutput(
 
 	// 4. Deduplicate
 	unique := s.verifier.FilterDuplicates(extracted)
-	log.Printf("  After dedup: %d findings")
+	log.Printf("  After dedup: %d findings", len(unique))
 
 	// 5. Aggregate
 	aggregated := s.verifier.AggregateFindings(unique)

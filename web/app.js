@@ -1,246 +1,291 @@
-// Global state
-let currentScanID = null;
+// ============================================================================
+// ujiscan Frontend API Client + Auth Manager
+// ============================================================================
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    checkAPIStatus();
-    loadTools();
-    setupEventListeners();
-});
+const API_BASE = 'http://localhost:8081';
 
-// Check API status
-async function checkAPIStatus() {
-    try {
-        const res = await fetch('/api/status');
-        const data = await res.json();
-        document.getElementById('apiStatus').textContent = `API: ${data.status}`;
-    } catch (err) {
-        document.getElementById('apiStatus').textContent = 'API: offline';
-        addLog('API connection failed', 'error');
+// ============================================================================
+// 1. AUTH MANAGEMENT
+// ============================================================================
+
+class AuthManager {
+    constructor() {
+        this.tokenKey = 'ujiscan_token';
+        this.userKey = 'ujiscan_user';
     }
-}
 
-// Load available tools
-async function loadTools() {
-    try {
-        const res = await fetch('/api/tools');
-        const tools = await res.json();
-        
-        const toolsList = document.getElementById('toolsList');
-        if (toolsList) {
-            toolsList.innerHTML = '';
-            tools.forEach(tool => {
-                const badge = document.createElement('span');
-                badge.className = `tool-badge ${tool.available ? 'available' : 'unavailable'}`;
-                badge.textContent = tool.name;
-                toolsList.appendChild(badge);
-            });
-        }
-
-        addLog(`${tools.length} tools loaded`, 'info');
-    } catch (err) {
-        addLog(`Failed to load tools: ${err.message}`, 'error');
+    // Get stored token
+    getToken() {
+        return localStorage.getItem(this.tokenKey);
     }
-}
 
-// Setup form submission
-function setupEventListeners() {
-    document.getElementById('scanForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        const target = document.getElementById('target').value;
-        if (!target.trim()) return;
+    // Set token after login
+    setToken(token) {
+        localStorage.setItem(this.tokenKey, token);
+    }
 
-        const button = e.target.querySelector('button');
-        button.disabled = true;
-        button.textContent = 'Starting...';
+    // Get current user
+    getUser() {
+        const user = localStorage.getItem(this.userKey);
+        return user ? JSON.parse(user) : null;
+    }
 
-        addLog(`Starting scan for target: ${target}`, 'info');
-        document.getElementById('status').innerHTML = '<span class="status-running">Running...</span>';
-        
+    // Set current user
+    setUser(user) {
+        localStorage.setItem(this.userKey, JSON.stringify(user));
+    }
+
+    // Logout
+    logout() {
+        localStorage.removeItem(this.tokenKey);
+        localStorage.removeItem(this.userKey);
+        window.location.href = '/html/login.html';
+    }
+
+    // Check if logged in
+    isLoggedIn() {
+        return !!this.getToken();
+    }
+
+    // Login
+    async login(email, password) {
         try {
-            const res = await fetch('/api/scan', {
+            const res = await fetch(`${API_BASE}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target })
+                body: JSON.stringify({ email, password })
             });
-            
-            if (res.ok) {
-                const data = await res.json();
-                currentScanID = data.id;
-                addLog(`Scan started: ${data.id}`, 'success');
-                document.getElementById('target').value = '';
-                
-                // Poll for results
-                pollScanResults(data.id);
-            } else {
-                const error = await res.text();
-                addLog(`Error: ${error}`, 'error');
-                document.getElementById('status').textContent = 'Failed';
+
+            if (!res.ok) {
+                throw new Error('Login failed');
             }
+
+            const data = await res.json();
+            this.setToken(data.token);
+            this.setUser({ email, role: data.role });
+            return true;
         } catch (err) {
-            addLog(`Error: ${err.message}`, 'error');
-            document.getElementById('status').textContent = 'Error';
-        } finally {
-            button.disabled = false;
-            button.textContent = 'Start Scan';
+            console.error('Login error:', err);
+            return false;
         }
-    });
-}
-
-// Poll for scan results
-async function pollScanResults(scanID) {
-    const maxAttempts = 60; // 60 seconds max (1 sec per attempt)
-    let attempt = 0;
-
-    const poll = async () => {
-        try {
-            const res = await fetch(`/api/scan/${scanID}`);
-            const scan = await res.json();
-
-            document.getElementById('status').innerHTML = 
-                `<span class="status-${scan.status}">${scan.status.toUpperCase()}</span>`;
-
-            // Display results
-            if (scan.results && scan.results.length > 0) {
-                displayResults(scan);
-            }
-
-            // If completed or failed, stop polling
-            if (scan.status === 'completed' || scan.status === 'failed') {
-                addLog(`Scan ${scan.status}`, scan.status === 'failed' ? 'error' : 'success');
-                
-                if (scan.error) {
-                    addLog(`Error: ${scan.error}`, 'error');
-                }
-                
-                return;
-            }
-
-            // Continue polling
-            if (attempt < maxAttempts) {
-                attempt++;
-                setTimeout(poll, 1000); // Poll every 1 second
-            } else {
-                // Max timeout reached
-                addLog(`Scan timeout after ${maxAttempts} seconds`, 'error');
-                document.getElementById('status').innerHTML = 
-                    `<span class="status-timeout">TIMEOUT</span>`;
-            }
-        } catch (err) {
-            addLog(`Poll error: ${err.message}`, 'error');
-            if (attempt < maxAttempts) {
-                attempt++;
-                setTimeout(poll, 2000);
-            }
-        }
-    };
-
-    poll();
-}
-
-// Format date safely
-function formatDate(dateString) {
-    try {
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return dateString;
-        }
-        return date.toLocaleString();
-    } catch (e) {
-        return dateString;
     }
 }
 
-// Calculate duration
-function formatDuration(startStr, endStr) {
-    try {
-        const start = new Date(startStr);
-        const end = new Date(endStr);
-        const ms = end - start;
-        const seconds = Math.round(ms / 1000);
-        return `${seconds}s`;
-    } catch (e) {
-        return 'unknown';
+const auth = new AuthManager();
+
+// ============================================================================
+// 2. API CLIENT
+// ============================================================================
+
+class APIClient {
+    constructor(baseURL) {
+        this.baseURL = baseURL;
+    }
+
+    // Helper: Make authenticated request
+    async request(endpoint, options = {}) {
+        const token = auth.getToken();
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const res = await fetch(`${this.baseURL}${endpoint}`, {
+            ...options,
+            headers
+        });
+
+        if (res.status === 401) {
+            auth.logout();
+        }
+
+        return res;
+    }
+
+    // Auth endpoints
+    async getMe() {
+        const res = await this.request('/auth/me');
+        return res.json();
+    }
+
+    // Engagement endpoints
+    async listEngagements() {
+        const res = await this.request('/api/engagements');
+        return res.json();
+    }
+
+    async createEngagement(data) {
+        const res = await this.request('/api/engagements', {
+            method: 'POST',
+            body: JSON.stringify(data)
+        });
+        return res.json();
+    }
+
+    async getEngagement(id) {
+        const res = await this.request(`/api/engagements/${id}`);
+        return res.json();
+    }
+
+    // Audit endpoints
+    async getAuditLogs() {
+        const res = await this.request('/api/audit/logs');
+        return res.json();
+    }
+
+    // Dashboard endpoints
+    async getDashboardTeam() {
+        const res = await this.request('/api/dashboard/team');
+        return res.json();
+    }
+
+    async getDashboardClient() {
+        const res = await this.request('/api/dashboard/client');
+        return res.json();
+    }
+
+    async getDashboardAdmin() {
+        const res = await this.request('/api/dashboard/admin');
+        return res.json();
+    }
+
+    // Notifications
+    async getNotifications() {
+        const res = await this.request('/api/notifications');
+        return res.json();
+    }
+
+    // Scan endpoints (legacy)
+    async listTools() {
+        const res = await this.request('/api/tools');
+        return res.json();
+    }
+
+    async startScan(target) {
+        const res = await this.request('/api/scan', {
+            method: 'POST',
+            body: JSON.stringify({ target })
+        });
+        return res.json();
+    }
+
+    async getScan(id) {
+        const res = await this.request(`/api/scan/${id}`);
+        return res.json();
+    }
+
+    async getStatus() {
+        const res = await this.request('/api/status');
+        return res.json();
     }
 }
 
-// Display scan results
-function displayResults(scan) {
-    const resultsDiv = document.getElementById('results');
-    if (!resultsDiv) return;
+const api = new APIClient(API_BASE);
 
-    let html = `<div class="results-header">
-        <h3>Results (${scan.results.length} tools)</h3>
-        <div class="result-summary">
-            Target: <strong>${escapeHtml(scan.target)}</strong> | 
-            Started: <strong>${formatDate(scan.started_at)}</strong> | 
-            Duration: <strong>${formatDuration(scan.started_at, scan.ended_at)}</strong>
-        </div>
-    </div>`;
+// ============================================================================
+// 3. UTILITY FUNCTIONS
+// ============================================================================
 
-    scan.results.forEach((result, idx) => {
-        const statusClass = result.success ? 'success' : 'error';
-        const args = (result.args || []).join(' ');
-        const output = result.stdout || result.stderr || '';
-        const truncated = output.length > 1000;
-        
-        html += `
-        <details class="result-item result-${statusClass}">
-            <summary>
-                <span class="tool-name">${result.tool_name}</span>
-                <span class="phase-badge">${result.phase}</span>
-                <span class="status-badge">${result.success ? 'OK' : 'FAILED'}</span>
-                <span class="duration">${result.duration_ms}ms</span>
-            </summary>
-            <div class="result-details">
-                <div class="command">
-                    <strong>Command:</strong> <code>${escapeHtml(result.command)} ${escapeHtml(args)}</code>
-                </div>
-                <div class="exit-code">
-                    <strong>Exit Code:</strong> ${result.exit_code}
-                </div>`;
-        
-        if (result.stdout) {
-            html += `<div class="output">
-                    <strong>Output:</strong>
-                    <pre>${escapeHtml(result.stdout.substring(0, 1000))}${truncated ? '...' : ''}</pre>
-                </div>`;
-        } else if (result.stderr) {
-            html += `<div class="error-output">
-                    <strong>Stderr:</strong>
-                    <pre>${escapeHtml(result.stderr.substring(0, 1000))}${truncated ? '...' : ''}</pre>
-                </div>`;
-        } else {
-            html += `<div class="no-output"><em>No output captured</em></div>`;
-        }
-        
-        if (result.error) {
-            html += `<div class="error">
-                    <strong>Error:</strong> ${escapeHtml(result.error)}
-                </div>`;
-        }
-        
-        html += `</div></details>`;
-    });
-
-    resultsDiv.innerHTML = html;
+// Format date
+function formatDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 }
 
-// Log utility
-function addLog(message, level = 'info') {
-    const logsContainer = document.getElementById('logs');
-    const entry = document.createElement('div');
-    entry.className = `log-entry ${level}`;
-    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
-    logsContainer.appendChild(entry);
-    logsContainer.scrollTop = logsContainer.scrollHeight;
+// Format time ago
+function formatTimeAgo(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    
+    if (seconds < 60) return 'just now';
+    if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+    if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+    return Math.floor(seconds / 86400) + 'd ago';
 }
 
-// HTML escape utility
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+// Show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
+
+// ============================================================================
+// 4. THEME MANAGEMENT
+// ============================================================================
+
+class ThemeManager {
+    constructor() {
+        this.themeKey = 'ujiscan_theme';
+        this.darkTheme = 'dark';
+        this.lightTheme = 'light';
+    }
+
+    init() {
+        const saved = localStorage.getItem(this.themeKey);
+        const theme = saved || this.darkTheme;
+        this.setTheme(theme);
+    }
+
+    setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem(this.themeKey, theme);
+    }
+
+    toggle() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === this.darkTheme ? this.lightTheme : this.darkTheme;
+        this.setTheme(next);
+    }
+
+    current() {
+        return document.documentElement.getAttribute('data-theme');
+    }
+}
+
+const theme = new ThemeManager();
+
+// ============================================================================
+// 5. PAGE INITIALIZATION
+// ============================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    theme.init();
+
+    // Check if user is logged in
+    if (!auth.isLoggedIn() && !window.location.pathname.includes('login.html')) {
+        window.location.href = '/html/login.html';
+        return;
+    }
+
+    // Initialize page-specific code if function exists
+    if (typeof initPage === 'function') {
+        initPage();
+    }
+});
+
+// ============================================================================
+// EXPORTS FOR GLOBAL USE
+// ============================================================================
+
+window.api = api;
+window.auth = auth;
+window.theme = theme;
+window.formatDate = formatDate;
+window.formatTimeAgo = formatTimeAgo;
+window.showNotification = showNotification;
