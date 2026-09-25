@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"crypto/rand"
 	"fmt"
 	"time"
 )
@@ -16,13 +17,25 @@ type SimpleTokenManager struct {
 // NewSimpleTokenManager creates a new token manager
 func NewSimpleTokenManager(secretKey string) *SimpleTokenManager {
 	if secretKey == "" {
-		secretKey = "ujiscan-default-secret-key-change-in-production"
+		// SECURITY: Generate a strong random key if not provided
+		// In production, this MUST be set via JWT_SECRET environment variable
+		secretKey = generateSecureKey()
 	}
 
 	return &SimpleTokenManager{
 		secretKey: secretKey,
 		tokens:    make(map[string]*Claims),
 	}
+}
+
+// generateSecureKey generates a cryptographically secure random key
+func generateSecureKey() string {
+	// Generate from crypto/rand for security
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic("failed to generate secure key: " + err.Error())
+	}
+	return fmt.Sprintf("%x", b)
 }
 
 // GenerateToken generates a new JWT token
