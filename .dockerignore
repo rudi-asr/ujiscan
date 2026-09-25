@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+vendor/
+node_modules/
+
+# Build artifacts
+ujiscan
+*.db
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.env.local
+
+# Testing
+*.test
+coverage.txt
+.nyc_output/
+
+# Documentation (keep these out of image)
+*.md
+docs/
+
+# CI/CD
+.github/
