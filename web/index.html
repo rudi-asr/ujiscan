@@ -686,10 +686,20 @@ function startScan() {
 
     addLog(`Starting ${currentMode} scan for ${target}...`, 'info');
     
+    // Map mode to playbook name
+    const modeToPlaybook = {
+        'reconnaissance': 'network-discovery',
+        'vulnerability': 'vulnerability-quick',
+        'web': 'web-full-scan',
+        'network': 'network-discovery',
+        'aggressive': 'web-full-scan'
+    };
+    
+    const playbook = modeToPlaybook[currentMode] || 'network-discovery';
+    
     const payload = {
         target: target,
-        mode: currentMode,
-        type: 'playbook'
+        playbook: playbook
     };
 
     fetch(`${API_BASE}/api/scan/playbook`, {
