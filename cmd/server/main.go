@@ -274,15 +274,32 @@ func Run() error {
 	mux.HandleFunc("PUT /api/notifications/{id}/read", requireAuth(dashboardHandler.HandleMarkNotificationAsRead))
 	mux.HandleFunc("DELETE /api/notifications/{id}", requireAuth(dashboardHandler.HandleDeleteNotification))
 
-	// Phase B agent routes (method-less pattern, check method in handler)
-	mux.HandleFunc("/api/agents/tasks/{id}/wait", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	// Phase B agent routes (global auth via middleware, no requireAuth wrapper)
+	mux.HandleFunc("/api/agents/status", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		agentHandler.HandleWaitTask(w, r)
-	}))
-	mux.HandleFunc("/api/agents/tasks/{id}", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+		agentHandler.HandleStatus(w, r)
+	})
+
+	mux.HandleFunc("/api/agents/tasks", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		agentHandler.HandleListTasks(w, r)
+	})
+
+	mux.HandleFunc("/api/agents/submit", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		agentHandler.HandleSubmit(w, r)
+	})
+
+	mux.HandleFunc("/api/agents/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
 			agentHandler.HandleGetTask(w, r)
@@ -291,28 +308,15 @@ func Run() error {
 		default:
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		}
-	}))
-	mux.HandleFunc("/api/agents/submit", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		agentHandler.HandleSubmit(w, r)
-	}))
-	mux.HandleFunc("/api/agents/status", requireAuth(func(w http.ResponseWriter, r *http.Request) {
+	})
+
+	mux.HandleFunc("/api/agents/tasks/{id}/wait", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		agentHandler.HandleStatus(w, r)
-	}))
-	mux.HandleFunc("/api/agents/tasks", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		agentHandler.HandleListTasks(w, r)
-	}))
+		agentHandler.HandleWaitTask(w, r)
+	})
 
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
