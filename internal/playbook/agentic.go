@@ -144,7 +144,12 @@ func (ae *AgenticExecutor) analyzePhaseResults(ctx context.Context, results []mo
 		}, nil
 	}
 
-	// Combine all outputs for analysis
+	// For recon phase, try to detect services and recommend tools dynamically
+	if phase == "recon" {
+		return ae.analyzeReconAndDetectServices(ctx, results, target)
+	}
+
+	// For other phases, use standard analysis
 	combinedOutput := ""
 	for i, result := range results {
 		out := result.Stdout
@@ -154,11 +159,8 @@ func (ae *AgenticExecutor) analyzePhaseResults(ctx context.Context, results []mo
 		combinedOutput += fmt.Sprintf("=== Tool %d: %s (exit=%d) ===\n%s\n\n", i+1, result.ToolName, result.ExitCode, out)
 	}
 
-	// Determine what prompt to send
 	var prompt string
 	switch phase {
-	case "recon":
-		prompt = fmt.Sprintf("Initial reconnaissance on %s completed with %d tools. Based on the results, should we proceed to enumeration? Which tools?", target, len(results))
 	case "enum":
 		prompt = fmt.Sprintf("Enumeration phase on %s completed. Should we run exploitation tools? Which ones?", target)
 	case "exploit":
@@ -167,9 +169,8 @@ func (ae *AgenticExecutor) analyzePhaseResults(ctx context.Context, results []mo
 		prompt = "Analyze these tool results and recommend next steps."
 	}
 
-	// Ask AI for analysis
 	fmt.Printf("[agentic] Sending analysis prompt to AI (phase=%s, tools=%d)\n", phase, len(results))
-	decision, err := ae.aiClient.AnalyzeToolOutput(ctx, "combined-tools", combinedOutput, prompt)
+	decision, err := ae.engine.aiClient.AnalyzeToolOutput(ctx, "combined-tools", combinedOutput, prompt)
 	if err != nil {
 		fmt.Printf("[agentic] AI analysis failed: %v\n", err)
 		return nil, err
@@ -177,6 +178,62 @@ func (ae *AgenticExecutor) analyzePhaseResults(ctx context.Context, results []mo
 
 	fmt.Printf("[agentic] AI Decision: %s (confidence=%.2f, tools=%v)\n", decision.Analysis, decision.Confidence, decision.RecommendedTools)
 	return decision, nil
+}
+
+// analyzeReconAndDetectServices performs service detection during recon phase
+func (ae *AgenticExecutor) analyzeReconAndDetectServices(ctx context.Context, results []models.ToolOutput, target string) (*ai.AgentDecision, error) {
+	fmt.Printf("[agentic] Phase 3.1: Detecting services from nmap output\n")
+
+	// Find nmap output
+	var nmapOutput string
+	for _, result := range results {
+		if result.ToolName == "nmap" {
+			nmapOutput = result.Stdout
+			break
+		}
+	}
+
+	if nmapOutput == "" {
+		fmt.Printf("[agentic] ⚠️  No nmap output available for service detection\n")
+		return &ai.AgentDecision{
+			RecommendedTools: ai.DefaultToolsForType("enum"),
+			Analysis:         "No nmap output to analyze",
+			Confidence:       0.5,
+			StopScan:         false,
+		}, nil
+	}
+
+	// Detect services
+	services := ae.engine.aiClient.DetectServicesFromNmap(nmapOutput)
+	if len(services) > 0 {
+		summary := ae.engine.aiClient.SummarizeServices(services)
+		fmt.Printf("[agentic] Service Detection Summary:\n%s", summary)
+
+		// Get tools for detected services
+		recommendedTools := ae.engine.aiClient.GetToolsForServices(services)
+		fmt.Printf("[agentic] Recommended tools based on services: %v\n", recommendedTools)
+
+		// Add default enum tools if none recommended
+		if len(recommendedTools) == 0 {
+			recommendedTools = ai.DefaultToolsForType("enum")
+		}
+
+		return &ai.AgentDecision{
+			Analysis:         fmt.Sprintf("Service detection identified %d service(s). Proceeding to enumeration.", len(services)),
+			RecommendedTools: recommendedTools,
+			Reasoning:        summary,
+			Confidence:       0.9,
+			StopScan:         false,
+		}, nil
+	}
+
+	fmt.Printf("[agentic] No services detected, using default tools\n")
+	return &ai.AgentDecision{
+		Analysis:         "No open ports detected",
+		RecommendedTools: ai.DefaultToolsForType("enum"),
+		Confidence:       0.5,
+		StopScan:         false,
+	}, nil
 }
 
 // generateFinalReport creates final AI-powered security assessment
