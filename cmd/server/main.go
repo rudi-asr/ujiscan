@@ -91,6 +91,9 @@ func Run() error {
 	engagementService := engagement.NewEngagementService(engagementStore, findingStore, commentStore)
 	engagementHandler := engagement.NewHandler(engagementService, engagementStore, findingStore, commentStore)
 
+	// Load engagement state from database (if exists)
+	_ = engagement.LoadState(pm)
+
 	auditStore := audit.NewMemoryAuditStore()
 	auditService := audit.NewAuditService(auditStore)
 	auditHandler := audit.NewHandler(auditService)
