@@ -72,9 +72,17 @@ func (e *Engine) ExecutePlaybook(scanID string, playbookName string, target stri
 
 	// Store all results in scan
 	fmt.Printf("[handler] Storing %d results to scan %s\n", len(ctx.Results), scanID)
+	fmt.Printf("[handler] ctx.Results content:\n")
+	for i, res := range ctx.Results {
+		fmt.Printf("[handler]   [%d] tool=%s, success=%v, stdout_len=%d\n", i, res.ToolName, res.Success, len(res.Stdout))
+	}
+	
 	for i, result := range ctx.Results {
 		fmt.Printf("[handler] Storing result %d: tool=%s, success=%v\n", i, result.ToolName, result.Success)
-		e.scanStore.AddResult(scanID, result)
+		err := e.scanStore.AddResult(scanID, result)
+		if err != nil {
+			fmt.Printf("[handler] ERROR storing result %d: %v\n", i, err)
+		}
 		
 		// Parse output to extract findings
 		findings := parser.ParseToolOutput(&result, scanID)

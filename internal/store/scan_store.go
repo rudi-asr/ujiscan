@@ -34,6 +34,7 @@ func (s *ScanStore) CreateScan(target string) (*models.Scan, error) {
 		Status:    models.ScanStatusPending,
 		StartedAt: time.Now(),
 		Results:   make([]models.ToolOutput, 0),
+		Findings:  make([]models.Finding, 0),
 	}
 
 	s.mu.Lock()
