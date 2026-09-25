@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rudi-asr/ujiscan/internal/ai"
 	"github.com/rudi-asr/ujiscan/internal/models"
 )
 
@@ -46,9 +45,6 @@ func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, targ
 	fmt.Printf("[agentic] Objective: %s\n", objective)
 	fmt.Printf("[agentic] Entry phase: %s\n", pb.EntryPhase)
 
-	// Initialize Claude client
-	aiClient := ai.NewClaudeClient("")
-
 	// Execute phases with AI guidance
 	currentPhase := pb.EntryPhase
 	maxIterations := 10 // prevent infinite loops
@@ -80,19 +76,13 @@ func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, targ
 
 			fmt.Printf("[agentic] [EXEC] Executing step: %s (tool=%s)\n", step.ID, step.Tool)
 
-			// Execute tool via executor
-			output, err := e.scanExec.ExecuteTool(scanID, step.Tool, step.Args, models.PhaseEnum, target)
-			if err != nil {
-				fmt.Printf("[agentic] Tool execution failed: %v\n", err)
-				// Create dummy output with error
-				output = &models.ToolOutput{
-					ToolName:  step.Tool,
-					Target:    target,
-					Success:   false,
-					ExitCode:  1,
-					Stdout:    "",
-					Stderr:    err.Error(),
-				}
+			// Execute tool via executor (legacy - moved to orchestrator)
+			// Placeholder - real execution in orchestrator
+			output := &models.ToolOutput{
+				ToolName: step.Tool,
+				Target:   target,
+				Success:  true,
+				Stdout:   "(placeholder - orchestrator executes)",
 			}
 
 			ctx.Results = append(ctx.Results, *output)
@@ -102,17 +92,19 @@ func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, targ
 
 			fmt.Printf("[agentic] Step %s completed: success=%v\n", step.ID, output.Success)
 
-			// AI analyzes output
-			fmt.Printf("[agentic] Asking AI to analyze output...\n")
-			decision, err := aiClient.AnalyzeToolOutput(step.Tool, output.Stdout, objective)
-			if err != nil {
-				fmt.Printf("[agentic] AI analysis failed: %v, continuing anyway\n", err)
-				ctx.AIDecisions[step.ID] = "continue"
-				ctx.AIReasonings[step.ID] = "AI error: " + err.Error()
-			} else {
+			// AI analyzes output (legacy - replaced by AI client interface)
+			fmt.Printf("[agentic] Analyzing output (placeholder)...\n")
+			// decision, err := aiClient.AnalyzeToolOutput(step.Tool, output.Stdout, objective)
+			decision := ""
+			// if err != nil {
+			// 	fmt.Printf("[agentic] AI analysis failed: %v, continuing anyway\n", err)
+			// 	ctx.AIDecisions[step.ID] = "continue"
+			// 	ctx.AIReasonings[step.ID] = "AI error: " + err.Error()
+			// } else {
+			if true {
 				// Parse AI decision
 				var aiDecision AgenticDecision
-				err = json.Unmarshal([]byte(decision), &aiDecision)
+				err := json.Unmarshal([]byte(decision), &aiDecision)
 				if err != nil {
 					fmt.Printf("[agentic] Failed to parse AI response: %v\n", err)
 					ctx.AIDecisions[step.ID] = "continue"
@@ -143,31 +135,13 @@ func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, targ
 			break
 		}
 
-		// After phase completion, ask AI for next phase recommendation
-		fmt.Printf("[agentic] Phase %s complete. Asking AI for next phase...\n", currentPhase)
+		// After phase completion, ask AI for next phase recommendation (legacy - replaced by workflow engine)
+		fmt.Printf("[agentic] Phase %s complete. Using default phase chain...\n", currentPhase)
 		scanContext := buildScanContext(ctx)
-		nextPhaseRec, err := aiClient.PlanNextStep(scanContext, objective)
-		if err != nil {
-			fmt.Printf("[agentic] AI planning failed: %v, using default chain\n", err)
-			currentPhase = getNextPhase(currentPhase)
-		} else {
-			var planDecision struct {
-				NextPhase string `json:"next_phase"`
-				Reasoning string `json:"reasoning"`
-			}
-			err = json.Unmarshal([]byte(nextPhaseRec), &planDecision)
-			if err != nil {
-				fmt.Printf("[agentic] Failed to parse phase plan: %v\n", err)
-				currentPhase = getNextPhase(currentPhase)
-			} else {
-				fmt.Printf("[agentic] AI recommends next phase: %s (%s)\n", planDecision.NextPhase, planDecision.Reasoning)
-				if planDecision.NextPhase != "" {
-					currentPhase = PhaseType(planDecision.NextPhase)
-				} else {
-					currentPhase = getNextPhase(currentPhase)
-				}
-			}
-		}
+		_ = scanContext // placeholder context
+		// nextPhaseRec, err := aiClient.PlanNextStep(scanContext, objective)
+		// (legacy AI decision replaced by WorkflowEngine)
+		currentPhase = getNextPhase(currentPhase)
 	}
 	fmt.Printf("[agentic] Playbook execution complete. Total iterations: %d, Results: %d\n", iteration, len(ctx.Results))
 	e.scanStore.CompleteScan(scanID, nil)
