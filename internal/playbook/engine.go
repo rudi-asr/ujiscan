@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rudi-asr/ujiscan/internal/ai"
 	"github.com/rudi-asr/ujiscan/internal/models"
 	"github.com/rudi-asr/ujiscan/internal/parser"
 	"github.com/rudi-asr/ujiscan/internal/store"
@@ -18,6 +19,7 @@ type Engine struct {
 	loader    *PlaybookLoader
 	scanStore *store.ScanStore
 	executor  *tools.Executor
+	aiClient  *ai.Client  // AI client for agentic mode
 }
 
 // NewEngine creates a new playbook engine
@@ -26,7 +28,15 @@ func NewEngine(loader *PlaybookLoader, scanStore *store.ScanStore, executor *too
 		loader:    loader,
 		scanStore: scanStore,
 		executor:  executor,
+		aiClient:  ai.NewClient(),
 	}
+}
+
+// ExecuteAgenticPlaybook runs agentic scan with AI-driven tool selection
+func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, target string, objective string) error {
+	fmt.Printf("[engine] Starting agentic playbook execution: %s for %s\n", playbookName, target)
+	executor := NewAgenticExecutor(e)
+	return executor.ExecuteAgenticScan(context.Background(), scanID, target, "full")
 }
 
 // ExecutePlaybook executes a playbook for a target
