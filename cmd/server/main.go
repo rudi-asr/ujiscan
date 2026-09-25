@@ -9,7 +9,10 @@ import (
 	"strings"
 
 	"github.com/rudi-asr/ujiscan/internal/api"
+	"github.com/rudi-asr/ujiscan/internal/audit"
 	"github.com/rudi-asr/ujiscan/internal/auth"
+	"github.com/rudi-asr/ujiscan/internal/dashboard"
+	"github.com/rudi-asr/ujiscan/internal/engagement"
 	"github.com/rudi-asr/ujiscan/internal/executor"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/registry"
@@ -64,8 +67,26 @@ func Run() error {
 	authService := auth.NewAuthService(userStore, sessionStore, tokenManager)
 	authHandler := auth.NewHandler(authService, userStore)
 
+	// Initialize Phase 7 services (engagement, audit, dashboard)
+	engagementStore := engagement.NewMemoryEngagementStore()
+	findingStore := engagement.NewMemoryFindingStore()
+	commentStore := engagement.NewMemoryCommentStore()
+	engagementService := engagement.NewEngagementService(engagementStore, findingStore, commentStore)
+	engagementHandler := engagement.NewHandler(engagementService, engagementStore, findingStore, commentStore)
+
+	auditStore := audit.NewMemoryAuditStore()
+	auditService := audit.NewAuditService(auditStore)
+	auditHandler := audit.NewHandler(auditService)
+
+	dashboardService := dashboard.NewMemoryDashboardService()
+	notificationService := dashboard.NewMemoryNotificationService()
+	dashboardHandler := dashboard.NewHandler(dashboardService, notificationService)
+
 	// Create API handler
 	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor, playbookEngine)
+	_ = engagementHandler  // Quiet for now; will wire handlers properly in next iteration
+	_ = auditHandler
+	_ = dashboardHandler
 
 	// Routes
 	mux := http.NewServeMux()
@@ -93,6 +114,54 @@ func Run() error {
 	// User management routes (admin only)
 	mux.HandleFunc("/api/users", authHandler.HandleListUsers)
 	mux.HandleFunc("/api/users/create", authHandler.HandleCreateUser)
+
+	// Phase 7 Engagement routes (placeholder for now)
+	mux.HandleFunc("/api/engagements", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.Method {
+		case http.MethodGet:
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"status":"ok","message":"List engagements","engagements":[]}`)
+		case http.MethodPost:
+			w.WriteHeader(http.StatusCreated)
+			fmt.Fprintf(w, `{"status":"ok","message":"Engagement created","id":"eng-123"}`)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Phase 7 Audit routes (placeholder for now)
+	mux.HandleFunc("/api/audit", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"status":"ok","message":"Audit logs","logs":[]}`)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Phase 7 Dashboard routes (placeholder for now)
+	mux.HandleFunc("/api/dashboard", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"status":"ok","message":"Dashboard metrics","metrics":{"total_engagements":0}}`)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	// Phase 7 Notifications routes (placeholder for now)
+	mux.HandleFunc("/api/notifications", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"status":"ok","message":"User notifications","notifications":[]}`)
+		} else {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
 
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
