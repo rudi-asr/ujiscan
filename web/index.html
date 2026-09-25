@@ -712,9 +712,9 @@ function startScan() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.scan_id) {
-            currentScanId = data.scan_id;
-            addLog(`Scan started: ${data.scan_id}`, 'success');
+        if (data.id) {
+            currentScanId = data.id;
+            addLog(`Scan started: ${data.id}`, 'success');
             pollScanStatus();
         } else {
             addLog(`Error: ${data.error || 'Unknown error'}`, 'error');
