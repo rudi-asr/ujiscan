@@ -234,10 +234,10 @@ func (c *Client) UpdateToolFeedback(tool string, success bool, duration time.Dur
 **Report Generation & Finding Prioritization**
 
 ### Goals
-- [ ] AI-powered executive summary
-- [ ] Finding prioritization (CVSS-like scoring)
-- [ ] Remediation recommendations per finding
-- [ ] Multi-format export (JSON, PDF, HTML)
+- [x] AI-powered executive summary
+- [x] Finding prioritization (CVSS-like scoring)
+- [x] Remediation recommendations per finding
+- [x] Multi-format export (JSON, Markdown, HTML)
 
 ### Deliverables
 - `GenerateFinalReport()` - AI-driven report generation

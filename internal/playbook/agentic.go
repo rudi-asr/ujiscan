@@ -225,37 +225,17 @@ func (ae *AgenticExecutor) analyzeReconAndDetectServices(ctx context.Context, re
 	}, nil
 }
 
-// generateFinalReport creates final AI-powered security assessment
+// generateFinalReport creates the AI-powered security assessment (C.5).
+// Returns the report as Markdown; a JSON preview is printed to the console.
 func (ae *AgenticExecutor) generateFinalReport(ctx context.Context, scanID string, target string) string {
-	scan, err := ae.engine.scanStore.GetScan(scanID)
+	reportData, err := ae.GenerateFinalReport(ctx, scanID, target)
 	if err != nil {
-		return "Report generation failed"
+		return fmt.Sprintf("Report generation failed: %v", err)
 	}
 
-	summary := fmt.Sprintf("🔍 Security Scan Report for %s\n", target)
-	summary += fmt.Sprintf("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
-	summary += fmt.Sprintf("Scan ID: %s\n", scanID)
-	summary += fmt.Sprintf("Tools Executed: %d\n", len(scan.Results))
-	summary += fmt.Sprintf("Findings Discovered: %d\n\n", len(scan.Findings))
-
-	// Group by severity
-	severityMap := make(map[string]int)
-	for _, finding := range scan.Findings {
-		severityMap[string(finding.Severity)]++
+	if jsonStr, err := reportData.ToJSON(); err == nil {
+		fmt.Printf("[agentic] Report JSON preview:\n%s\n", truncateString(jsonStr, 2000))
 	}
 
-	summary += "Findings by Severity:\n"
-	for severity, count := range severityMap {
-		summary += fmt.Sprintf("  • %s: %d\n", severity, count)
-	}
-
-	summary += "\nTop Findings:\n"
-	for i, finding := range scan.Findings {
-		if i >= 5 {
-			break
-		}
-		summary += fmt.Sprintf("  %d. [%s] %s (%s)\n", i+1, finding.Severity, finding.Title, finding.ToolName)
-	}
-
-	return summary
+	return reportData.ToMarkdown()
 }
