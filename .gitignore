@@ -4,6 +4,8 @@ ujiscan
 *.dll
 *.so
 *.dylib
+*.db
+*.log
 
 # IDE
 .vscode/

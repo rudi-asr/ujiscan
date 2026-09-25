@@ -4,6 +4,8 @@ package dashboard
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/rudi-asr/ujiscan/internal/auth"
 )
 
 // Handler provides HTTP handlers for dashboard endpoints
@@ -84,8 +86,8 @@ func (h *Handler) HandleGetNotifications(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Get user from context (set by auth middleware)
-	userID, ok := r.Context().Value("user_id").(string)
-	if !ok {
+	userID := auth.GetUserID(r)
+	if userID == "" {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
