@@ -11,10 +11,6 @@
     box-sizing: border-box;
 }
 
-html {
-    color-scheme: dark light;
-}
-
 html[data-theme="dark"] {
     --bg: #0a0e27;
     --fg: #e0e0e0;
@@ -65,6 +61,7 @@ header {
     margin-bottom: 30px;
     border-bottom: 2px solid var(--border);
     padding-bottom: 20px;
+    position: relative;
 }
 
 header h1 {
@@ -77,6 +74,12 @@ header .subtitle {
     font-size: 1.1em;
     color: var(--fg);
     opacity: 0.8;
+}
+
+.github-info a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 0.95em;
 }
 
 .theme-toggle {
@@ -92,6 +95,37 @@ header .subtitle {
     font-size: 1.2em;
 }
 
+/* ===== AUTH BAR ===== */
+.auth-bar {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.auth-bar input {
+    width: auto;
+    min-width: 220px;
+}
+
+.auth-bar .user-chip {
+    padding: 8px 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-size: 0.9em;
+}
+
+.btn-logout {
+    background: var(--error);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+}
+
+/* ===== NAV ===== */
 .nav-tabs {
     display: flex;
     gap: 10px;
@@ -128,6 +162,20 @@ header .subtitle {
     display: block;
 }
 
+/* ===== CARDS & FORM ===== */
+.card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    margin-bottom: 15px;
+    color: var(--accent);
+}
+
 .form-group {
     margin-bottom: 20px;
 }
@@ -136,26 +184,23 @@ label {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
-    color: var(--fg);
 }
 
 input[type="text"],
-input[type="url"],
+input[type="email"],
+input[type="password"],
 select,
 textarea {
     width: 100%;
     padding: 10px;
-    background: var(--bg-secondary);
+    background: var(--bg);
     border: 1px solid var(--border);
     color: var(--fg);
     border-radius: 4px;
     font-size: 1em;
 }
 
-input[type="text"]:focus,
-input[type="url"]:focus,
-select:focus,
-textarea:focus {
+input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 5px var(--accent);
@@ -178,30 +223,103 @@ button:hover {
     transform: translateY(-2px);
 }
 
-button:active {
-    transform: translateY(0);
-}
-
-.card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
-
-.grid-2 {
+/* ===== SCAN MODE CARDS (3-tier) ===== */
+.scan-modes {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
 }
 
-@media (max-width: 768px) {
-    .grid-2 {
+@media (max-width: 900px) {
+    .scan-modes {
         grid-template-columns: 1fr;
     }
 }
 
+.mode-btn {
+    padding: 20px;
+    text-align: left;
+    border: 2px solid var(--border);
+    background: var(--bg-secondary);
+    color: var(--fg);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: block;
+    width: 100%;
+}
+
+.mode-btn:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+}
+
+.mode-btn.selected {
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+}
+
+.mode-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 1.15em;
+}
+
+.mode-desc {
+    font-size: 0.85em;
+    opacity: 0.75;
+    line-height: 1.5;
+}
+
+.mode-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-top: 8px;
+    background: var(--border);
+}
+
+/* ===== DYNAMIC SECTION ===== */
+#quickToolsSection, #fullAISection {
+    padding: 15px;
+    border: 1px dashed var(--accent);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.tool-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+@media (max-width: 768px) {
+    .tool-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.tool-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.tool-item input {
+    width: auto;
+}
+
+/* ===== STATUS & RESULTS ===== */
 .status-badge {
     display: inline-block;
     padding: 4px 12px;
@@ -210,31 +328,61 @@ button:active {
     font-weight: 600;
 }
 
-.status-badge.pending {
-    background: var(--warning);
-    color: var(--bg);
+.status-badge.pending { background: var(--warning); color: var(--bg); }
+.status-badge.running { background: var(--info); color: white; }
+.status-badge.completed { background: var(--success); color: var(--bg); }
+.status-badge.failed { background: var(--error); color: white; }
+
+.result-item {
+    border: 1px solid var(--border);
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    background: var(--bg);
 }
 
-.status-badge.running {
-    background: var(--info);
-    color: white;
+.result-item h4 { margin-bottom: 8px; color: var(--accent); }
+
+.result-item pre {
+    background: var(--bg-secondary);
+    padding: 10px;
+    border-radius: 4px;
+    overflow-x: auto;
+    font-size: 0.85em;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
 }
 
-.status-badge.completed {
-    background: var(--success);
-    color: var(--bg);
+/* ===== FINDINGS / SEVERITY ===== */
+.severity-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
-.status-badge.failed {
-    background: var(--error);
-    color: white;
+@media (max-width: 768px) {
+    .severity-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
-.severity-critical { color: var(--critical); font-weight: 600; }
-.severity-high { color: var(--high); font-weight: 600; }
-.severity-medium { color: var(--medium); font-weight: 600; }
-.severity-low { color: var(--low); font-weight: 600; }
-.severity-info { color: var(--info); font-weight: 600; }
+.severity-box {
+    padding: 15px;
+    text-align: center;
+    border-radius: 6px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+}
+
+.severity-box .count { font-size: 2em; font-weight: 700; margin-bottom: 5px; }
+.severity-box .label { font-size: 0.85em; opacity: 0.85; }
+.severity-box.critical { background: rgba(255, 23, 68, 0.12); border-color: var(--critical); }
+.severity-box.high { background: rgba(255, 87, 34, 0.12); border-color: var(--high); }
+.severity-box.medium { background: rgba(255, 193, 7, 0.12); border-color: var(--medium); }
+.severity-box.low { background: rgba(76, 175, 80, 0.12); border-color: var(--low); }
+.severity-box.info { background: rgba(33, 150, 243, 0.12); border-color: var(--info); }
 
 .finding-item {
     background: var(--bg);
@@ -243,42 +391,78 @@ button:active {
     margin-bottom: 10px;
     border-radius: 4px;
 }
-
 .finding-item.critical { border-left-color: var(--critical); }
 .finding-item.high { border-left-color: var(--high); }
 .finding-item.medium { border-left-color: var(--medium); }
 .finding-item.low { border-left-color: var(--low); }
 .finding-item.info { border-left-color: var(--info); }
 
-.finding-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    margin-bottom: 8px;
+.severity-critical { color: var(--critical); font-weight: 600; }
+.severity-high { color: var(--high); font-weight: 600; }
+.severity-medium { color: var(--medium); font-weight: 600; }
+.severity-low { color: var(--low); font-weight: 600; }
+.severity-info { color: var(--info); font-weight: 600; }
+
+/* ===== REPORT (hostedscan-style) ===== */
+.report-header {
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    text-align: center;
 }
 
-.finding-title {
-    font-weight: 600;
-    margin-bottom: 4px;
+.report-header h2 { font-size: 1.8em; color: var(--accent); }
+.report-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
 }
-
-.finding-meta {
-    font-size: 0.85em;
-    color: var(--fg);
-    opacity: 0.7;
-    margin-bottom: 4px;
-}
-
-.finding-evidence {
-    font-size: 0.9em;
-    padding: 8px;
-    background: var(--bg-secondary);
+.report-meta div {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 10px;
     border-radius: 4px;
-    border-left: 2px solid var(--accent);
-    margin-top: 8px;
-    font-family: monospace;
+    font-size: 0.9em;
+}
+.report-meta span { display: block; opacity: 0.6; font-size: 0.8em; }
+
+table.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 0.92em;
 }
 
+table.report-table th, table.report-table td {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    text-align: left;
+}
+
+table.report-table th {
+    background: var(--bg-secondary);
+    color: var(--accent);
+}
+
+.report-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.btn-print {
+    background: var(--success);
+    color: var(--bg);
+}
+
+.btn-export {
+    background: var(--info);
+    color: white;
+}
+
+/* ===== LOGS ===== */
 .log-entry {
     padding: 8px;
     margin-bottom: 8px;
@@ -287,72 +471,17 @@ button:active {
     font-size: 0.9em;
     font-family: monospace;
 }
-
 .log-entry.info { border-left-color: var(--info); }
 .log-entry.success { border-left-color: var(--success); }
 .log-entry.error { border-left-color: var(--error); }
 .log-entry.warning { border-left-color: var(--warning); }
 
-.severity-summary {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.severity-box {
-    padding: 15px;
-    text-align: center;
-    border-radius: 4px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-}
-
-.severity-box .count {
-    font-size: 2em;
-    font-weight: 700;
-    margin-bottom: 5px;
-}
-
-.severity-box .label {
-    font-size: 0.9em;
-    opacity: 0.8;
-}
-
-.severity-box.critical { background: rgba(255, 23, 68, 0.1); border-color: var(--critical); }
-.severity-box.high { background: rgba(255, 87, 34, 0.1); border-color: var(--high); }
-.severity-box.medium { background: rgba(255, 193, 7, 0.1); border-color: var(--medium); }
-.severity-box.low { background: rgba(76, 175, 80, 0.1); border-color: var(--low); }
-.severity-box.info { background: rgba(33, 150, 243, 0.1); border-color: var(--info); }
-
-.scope-list {
-    list-style: none;
-}
-
-.scope-list li {
-    padding: 8px;
+#logsList {
+    max-height: 500px;
+    overflow-y: auto;
     background: var(--bg);
-    border: 1px solid var(--border);
+    padding: 10px;
     border-radius: 4px;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.scope-list li.allowed {
-    border-left: 3px solid var(--success);
-}
-
-.scope-list li.denied {
-    border-left: 3px solid var(--error);
-}
-
-.remove-btn {
-    padding: 4px 8px;
-    font-size: 0.85em;
-    background: var(--error);
-    color: white;
 }
 
 .spinner {
@@ -370,54 +499,24 @@ button:active {
     100% { transform: rotate(360deg); }
 }
 
-.loading {
-    text-align: center;
-    padding: 40px;
-}
+.loading { text-align: center; padding: 40px; }
 
-.mode-selector {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
-}
+.hidden { display: none !important; }
 
-.mode-btn {
-    padding: 15px;
-    text-align: center;
-    border: 2px solid var(--border);
-    background: var(--bg-secondary);
-    color: var(--fg);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.mode-btn:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-}
-
-.mode-btn.selected {
-    border-color: var(--accent);
-    background: var(--bg);
-    box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-}
-
-.mode-title {
-    font-weight: 600;
-    margin-bottom: 4px;
-}
-
-.mode-desc {
-    font-size: 0.8em;
-    opacity: 0.7;
+/* ===== PRINT (PDF via browser) ===== */
+@media print {
+    .nav-tabs, .auth-bar, .theme-toggle, .report-actions, .btn-export, .btn-print, .mode-btn {
+        display: none !important;
+    }
+    body { background: white; color: black; }
+    * { background: white !important; color: black !important; box-shadow: none !important; }
+    table.report-table th { background: #eee !important; color: black !important; }
 }
     </style>
 </head>
 <body>
     <button class="theme-toggle" onclick="toggleTheme()">☀️</button>
-    
+
     <div class="container">
         <header>
             <h1>☠️ ujiscan</h1>
@@ -427,347 +526,323 @@ button:active {
             </div>
         </header>
 
-        <div class="nav-tabs">
-            <button class="nav-btn active" onclick="switchPanel('scan')">Scan</button>
-            <button class="nav-btn" onclick="switchPanel('scope')">Scope</button>
-            <button class="nav-btn" onclick="switchPanel('findings')">Findings</button>
-            <button class="nav-btn" onclick="switchPanel('logs')">Logs</button>
-            <button class="nav-btn" onclick="switchPanel('tools')">Tools</button>
+        <!-- AUTH BAR -->
+        <div id="authBar" class="auth-bar" style="display:none;">
+            <input type="email" id="loginEmail" placeholder="Email" value="admin@ujiscan.local">
+            <input type="password" id="loginPassword" placeholder="Password" value="admin123" style="min-width:150px;">
+            <button onclick="handleLogin()">Sign In</button>
+            <div style="font-size:0.85em; opacity:0.6;">Demo: admin@ujiscan.local / admin123</div>
+        </div>
+        <div id="userBar" class="auth-bar" style="display:none;">
+            <span class="user-chip" id="userChip">👤 admin</span>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
         </div>
 
-        <!-- SCAN PANEL -->
+        <!-- NAV -->
+        <div class="nav-tabs">
+            <button class="nav-btn active" onclick="switchPanel('scan', this)">Scan</button>
+            <button class="nav-btn" onclick="switchPanel('report', this)">Report</button>
+            <button class="nav-btn" onclick="switchPanel('findings', this)">Findings</button>
+            <button class="nav-btn" onclick="switchPanel('logs', this)">Logs</button>
+            <button class="nav-btn" onclick="switchPanel('tools', this)">Tools</button>
+        </div>
+
+        <!-- ===== SCAN PANEL ===== -->
         <div id="scan" class="panel active">
             <div class="card">
-                <h2>Start Scan</h2>
-                <p style="opacity: 0.8; margin-bottom: 15px;">
-                    Note: Backend server running at http://103.181.142.5:8081
-                </p>
-
+                <h2>New Scan</h2>
                 <div class="form-group">
-                    <label for="target">Target (e.g., 192.168.1.1 or example.com)</label>
-                    <input type="text" id="target" placeholder="example.com" value="127.0.0.1">
+                    <label for="target">Target (domain / IP / URL)</label>
+                    <input type="text" id="target" placeholder="example.com" value="example.com">
                 </div>
 
                 <div class="form-group">
-                    <label>Engagement Mode</label>
-                    <div class="mode-selector">
-                        <div class="mode-btn selected" data-mode="reconnaissance" onclick="selectMode('reconnaissance')">
-                            <div class="mode-title">🔍 Recon</div>
-                            <div class="mode-desc">Passive info gathering</div>
+                    <label>Scan Mode — pilih salah satu</label>
+                    <div class="scan-modes">
+                        <div class="mode-btn selected" data-mode="regular" onclick="selectMode('regular')">
+                            <div class="mode-title">📋 Regular Scan</div>
+                            <div class="mode-desc">
+                                Semua 9 tools utama (hostedscan):
+                                dig, subfinder, nmap, httpx, whatweb, sslscan,
+                                nuclei, gobuster, nikto. Menyeluruh &amp; lengkap.
+                            </div>
+                            <span class="mode-badge">9 tools · ~2 jam</span>
                         </div>
-                        <div class="mode-btn" data-mode="hunt" onclick="selectMode('hunt')">
-                            <div class="mode-title">🎯 Hunt</div>
-                            <div class="mode-desc">Vuln scanning</div>
+                        <div class="mode-btn" data-mode="quick" onclick="selectMode('quick')">
+                            <div class="mode-title">⚡ Quick Scan</div>
+                            <div class="mode-desc">
+                                Pilih tools bebas sesuai kebutuhan (checklist).
+                                Hanya tool yang dipilih yang dijalankan — cepat &amp; hemat.
+                            </div>
+                            <span class="mode-badge">pilih sendiri · ~5-20 mnt</span>
                         </div>
-                        <div class="mode-btn" data-mode="red-team" onclick="selectMode('red-team')">
-                            <div class="mode-title">⚔️ Red Team</div>
-                            <div class="mode-desc">Full assessment</div>
-                        </div>
-                        <div class="mode-btn" data-mode="network-scan" onclick="selectMode('network-scan')">
-                            <div class="mode-title">🌐 Network</div>
-                            <div class="mode-desc">Network-only</div>
+                        <div class="mode-btn" data-mode="full" onclick="selectMode('full')">
+                            <div class="mode-title">🤖 Full Scan AI</div>
+                            <div class="mode-desc">
+                                100% dijalankan AI agent. AI memilih tools dari
+                                ratusan tools (tidak perlu diinstall lokal) sesuai
+                                target. Pilih engine: DeepSeek / OpenAI / Claude.
+                            </div>
+                            <span class="mode-badge">AI agent · DeepSeek/OpenAI/Claude</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="scanType">Scan Type</label>
-                    <select id="scanType" onchange="updateToolSelector()">
-                        <option value="regular">Regular Scan (all 9 tools)</option>
-                        <option value="quick">Quick Scan (select tools)</option>
-                        <option value="full">Full Scan (AI-driven)</option>
-                    </select>
+                <!-- Quick Scan: tools checklist -->
+                <div id="quickToolsSection" class="hidden">
+                    <label>Pilih Tools (checklist bebas)</label>
+                    <div class="tool-grid" id="quickToolsList"></div>
                 </div>
 
-                <!-- Tool Selector for Quick Scan -->
-                <div id="toolSelector" style="display:none;" class="form-group">
-                    <label>Select Tools for Quick Scan</label>
-                    <div style="border: 1px solid #444; padding: 15px; border-radius: 4px; max-height: 200px; overflow-y: auto;">
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-dig" value="dig"> <label style="display:inline; margin-left: 5px;">dig (DNS lookup)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-subfinder" value="subfinder"> <label style="display:inline; margin-left: 5px;">subfinder (Subdomain discovery)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-nmap" value="nmap" checked> <label style="display:inline; margin-left: 5px;">nmap (Port scanning)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-httpx" value="httpx"> <label style="display:inline; margin-left: 5px;">httpx (HTTP probing)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-whatweb" value="whatweb"> <label style="display:inline; margin-left: 5px;">whatweb (Web fingerprinting)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-sslscan" value="sslscan"> <label style="display:inline; margin-left: 5px;">sslscan (SSL/TLS audit)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-nuclei" value="nuclei" checked> <label style="display:inline; margin-left: 5px;">nuclei (Vulnerability scan)</label>
-                        </div>
-                        <div style="margin-bottom: 8px;">
-                            <input type="checkbox" id="tool-gobuster" value="gobuster"> <label style="display:inline; margin-left: 5px;">gobuster (Directory brute-force)</label>
-                        </div>
-                        <div style="margin-bottom: 0px;">
-                            <input type="checkbox" id="tool-nikto" value="nikto"> <label style="display:inline; margin-left: 5px;">nikto (Web server scan)</label>
-                        </div>
+                <!-- Full Scan AI: engine selector -->
+                <div id="fullAISection" class="hidden">
+                    <div class="form-group">
+                        <label for="aiEngine">AI Engine</label>
+                        <select id="aiEngine">
+                            <option value="deepseek">DeepSeek Flash</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="claude">Claude</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="aiObjective">Objective / Instruksi (opsional)</label>
+                        <textarea id="aiObjective" rows="3" placeholder="Contoh: comprehensive security assessment, fokus pada web application vulnerabilities..."></textarea>
+                    </div>
+                    <div style="font-size:0.85em; opacity:0.65;">
+                        ℹ️ Full Scan AI tidak butuh tools diinstall lokal — AI agent memilih tools dari katalog ratusan tools sesuai target &amp; instruksi, seperti OmOP (oh-my-openagent).
                     </div>
                 </div>
 
-                <button onclick="startScan()">Start Scan</button>
+                <button onclick="startScan()" style="width:100%; padding:14px; font-size:1.1em;">▶ Start Scan</button>
             </div>
 
             <div class="card">
                 <h2>Scan Status</h2>
-                <div id="scanStatus" style="min-height: 150px;">
-                    <div style="opacity: 0.7;">No active scan</div>
+                <div id="scanStatus">
+                    <div style="opacity:0.7;">Belum ada scan aktif. Pilih mode &amp; target di atas, lalu klik Start Scan.</div>
                 </div>
             </div>
 
             <div class="card">
-                <h2>Results</h2>
-                <div id="scanResults" style="min-height: 200px;">
-                    <div style="opacity: 0.7;">Results will appear here</div>
+                <h2>Live Results</h2>
+                <div id="scanResults">
+                    <div style="opacity:0.7;">Hasil scan akan tampil di sini secara real-time.</div>
                 </div>
             </div>
         </div>
 
-        <!-- SCOPE PANEL -->
-        <div id="scope" class="panel">
-            <div class="grid-2">
-                <div class="card">
-                    <h2>Add Scope Pattern</h2>
-                    <div class="form-group">
-                        <label for="scopePattern">Pattern (domain, *.domain, CIDR, domain:port)</label>
-                        <input type="text" id="scopePattern" placeholder="*.example.com" value="example.com">
-                    </div>
-                    <div class="form-group">
-                        <label for="scopeType">Type</label>
-                        <select id="scopeType">
-                            <option value="allow">Allow (Whitelist)</option>
-                            <option value="deny">Deny (Blacklist)</option>
-                        </select>
-                    </div>
-                    <button onclick="addScopePattern()">Add Pattern</button>
-                </div>
-
-                <div class="card">
-                    <h2>Scope Configuration</h2>
-                    <div class="form-group">
-                        <label for="scopeMode">Scope Mode</label>
-                        <select id="scopeMode">
-                            <option value="strict">Strict (Whitelist Only)</option>
-                            <option value="permissive">Permissive (Allow by Default)</option>
-                        </select>
-                    </div>
-                    <button onclick="applyScopeMode()">Apply</button>
-                </div>
-            </div>
-
+        <!-- ===== REPORT PANEL (hostedscan-style) ===== -->
+        <div id="report" class="panel">
             <div class="card">
-                <h2>Current Scope</h2>
-                <div id="scopeList" style="min-height: 200px;">
-                    <ul class="scope-list">
-                        <li class="allowed">
-                            <span>example.com</span>
-                            <button class="remove-btn" onclick="removeScope('example.com')">Remove</button>
-                        </li>
-                    </ul>
+                <div class="report-header">
+                    <h2 id="reportTitle">📄 Scan Report</h2>
+                    <p style="opacity:0.7;">Laporan hasil scan — format ala hostedscan</p>
                 </div>
+                <div class="report-actions">
+                    <button class="btn-print" onclick="window.print()">🖨️ Print / Save PDF</button>
+                    <button class="btn-export" onclick="exportReportHTML()">⬇️ Export HTML</button>
+                </div>
+                <div id="reportMeta"></div>
+                <div id="reportSeverity"></div>
+                <div id="reportFindings"></div>
+                <div id="reportTools"></div>
+                <div id="reportEmpty" style="opacity:0.6; text-align:center; padding:40px;">Belum ada scan yang selesai. Jalankan scan dulu dari tab Scan.</div>
             </div>
         </div>
 
-        <!-- FINDINGS PANEL -->
+        <!-- ===== FINDINGS PANEL ===== -->
         <div id="findings" class="panel">
             <div class="card">
                 <h2>Findings Summary</h2>
-                <div class="severity-summary" id="severitySummary">
-                    <div class="severity-box critical">
-                        <div class="count">0</div>
-                        <div class="label">🔴 Critical</div>
-                    </div>
-                    <div class="severity-box high">
-                        <div class="count">0</div>
-                        <div class="label">🟠 High</div>
-                    </div>
-                    <div class="severity-box medium">
-                        <div class="count">0</div>
-                        <div class="label">🟡 Medium</div>
-                    </div>
-                    <div class="severity-box low">
-                        <div class="count">0</div>
-                        <div class="label">🟢 Low</div>
-                    </div>
-                    <div class="severity-box info">
-                        <div class="count">0</div>
-                        <div class="label">ℹ️ Info</div>
-                    </div>
-                </div>
+                <div class="severity-summary" id="severitySummary"></div>
             </div>
-
             <div class="card">
-                <h2>Findings</h2>
-                <div id="findingsList" style="min-height: 300px;">
-                    <div style="opacity: 0.7;">No findings yet. Run a scan to populate findings.</div>
+                <h2>Findings List</h2>
+                <div id="findingsList">
+                    <div style="opacity:0.7;">Belum ada findings. Jalankan scan untuk mengisi findings.</div>
                 </div>
             </div>
         </div>
 
-        <!-- LOGS PANEL -->
+        <!-- ===== LOGS PANEL ===== -->
         <div id="logs" class="panel">
             <div class="card">
                 <h2>Execution Log</h2>
-                <button onclick="clearLogs()" style="margin-bottom: 15px;">Clear Logs</button>
-                <div id="logsList" style="max-height: 500px; overflow-y: auto; background: var(--bg); padding: 10px; border-radius: 4px;">
-                    <div style="opacity: 0.7;">Logs will appear here</div>
+                <button onclick="clearLogs()" style="margin-bottom:15px;">Clear Logs</button>
+                <div id="logsList">
+                    <div style="opacity:0.7;">Logs akan tampil di sini.</div>
                 </div>
             </div>
         </div>
 
-        <!-- TOOLS PANEL -->
+        <!-- ===== TOOLS PANEL ===== -->
         <div id="tools" class="panel">
             <div class="card">
-                <h2>Available Tools</h2>
-                <div id="toolsList" style="min-height: 300px;">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        <p>Loading tools...</p>
-                    </div>
+                <h2>Available Tools (hostedscan)</h2>
+                <div id="toolsList">
+                    <div class="loading"><div class="spinner"></div><p>Loading tools...</p></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-// Detect environment
+// ============================================================================
+// KONFIGURASI
+// ============================================================================
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 const API_BASE = isLocalhost ? 'http://localhost:8081' : 'https://eds-barrel-entity-sponsor.trycloudflare.com';
 
+const TOOLS = ['dig', 'subfinder', 'nmap', 'httpx', 'whatweb', 'sslscan', 'nuclei', 'gobuster', 'nikto'];
+
+let authToken = localStorage.getItem('ujiscan_token') || null;
 let currentScanId = null;
-let currentMode = 'reconnaissance';
+let currentMode = 'regular';
+let latestScan = null;
 let findings = [];
 let logs = [];
-let authToken = null;
 
-// Initialize auth on page load
-window.addEventListener('DOMContentLoaded', initAuth);
-
+// ============================================================================
+// THEME
+// ============================================================================
 function toggleTheme() {
     const html = document.documentElement;
-    const currentTheme = html.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
 }
 
-function switchPanel(panelName) {
+// init: dark default (aturan rudilab: dark mode SELALU default)
+(function initTheme() {
+    const saved = localStorage.getItem('theme');
+    document.documentElement.setAttribute('data-theme', saved === 'light' ? 'light' : 'dark');
+})();
+
+// ============================================================================
+// LOGIN / LOGOUT (manual, tanpa auto-login)
+// ============================================================================
+function refreshAuthUI() {
+    if (authToken) {
+        document.getElementById('authBar').style.display = 'none';
+        document.getElementById('userBar').style.display = 'flex';
+    } else {
+        document.getElementById('authBar').style.display = 'flex';
+        document.getElementById('userBar').style.display = 'none';
+    }
+}
+
+async function handleLogin() {
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (data.token) {
+            authToken = data.token;
+            localStorage.setItem('ujiscan_token', authToken);
+            localStorage.setItem('ujiscan_user', JSON.stringify({ email, role: data.role }));
+            document.getElementById('userChip').textContent = '👤 ' + email;
+            refreshAuthUI();
+            addLog('Login berhasil: ' + email, 'success');
+            loadTools();
+        } else {
+            alert('Invalid email or password');
+        }
+    } catch (err) {
+        console.error('Login error:', err);
+        alert('Login gagal — cek backend di ' + API_BASE);
+    }
+}
+
+function handleLogout() {
+    authToken = null;
+    localStorage.removeItem('ujiscan_token');
+    localStorage.removeItem('ujiscan_user');
+    refreshAuthUI();
+    addLog('Logged out', 'warning');
+}
+
+// ============================================================================
+// NAV & MODE
+// ============================================================================
+function switchPanel(name, btn) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(panelName).classList.add('active');
-    event.target.classList.add('active');
-    
-    if (panelName === 'tools') {
-        loadTools();
-    }
+    document.getElementById(name).classList.add('active');
+    if (btn) btn.classList.add('active');
+    if (name === 'tools') loadTools();
+    if (name === 'report') renderReport();
+    if (name === 'findings') renderFindings();
 }
 
 function selectMode(mode) {
     currentMode = mode;
-    document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('selected'));
-    event.target.closest('.mode-btn').classList.add('selected');
-}
-
-function initAuth() {
-    // Auto-login for local testing
-    console.log('Initializing auth...');
-    fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            email: 'admin@ujiscan.local',
-            password: 'admin123'
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.token) {
-            authToken = data.token;
-            console.log('✅ Authenticated as:', data.email);
-            addLog(`Logged in as ${data.email}`, 'success');
-        } else {
-            console.error('Auth failed:', data);
-            addLog('Authentication failed', 'error');
-        }
-    })
-    .catch(err => {
-        console.error('Auth error:', err);
-        addLog(`Auth error: ${err.message}`, 'error');
-    });
-}
-    
-function updateToolSelector() {
-    const scanType = document.getElementById('scanType').value;
-    const toolSelector = document.getElementById('toolSelector');
-    if (scanType === 'quick') {
-        toolSelector.style.display = 'block';
-    } else {
-        toolSelector.style.display = 'none';
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelector(`.mode-btn[data-mode="${mode}"]`).classList.add('selected');
+    document.getElementById('quickToolsSection').classList.toggle('hidden', mode !== 'quick');
+    document.getElementById('fullAISection').classList.toggle('hidden', mode !== 'full');
+    if (mode === 'quick' && document.getElementById('quickToolsList').children.length === 0) {
+        renderQuickTools();
     }
 }
 
+// ============================================================================
+// QUICK SCAN TOOLS CHECKLIST
+// ============================================================================
+function renderQuickTools() {
+    const list = document.getElementById('quickToolsList');
+    list.innerHTML = TOOLS.map(t => `
+        <label class="tool-item">
+            <input type="checkbox" class="quick-tool" value="${t}" ${t === 'nmap' ? 'checked' : ''}>
+            <span>${t}</span>
+        </label>
+    `).join('');
+}
+
+// ============================================================================
+// SCAN EXECUTION
+// ============================================================================
 function startScan() {
-    if (!authToken) {
-        addLog('Not authenticated. Retrying login...', 'warning');
-        initAuth();
-        setTimeout(startScan, 1000);
-        return;
-    }
-
-    const target = document.getElementById('target').value;
+    const target = document.getElementById('target').value.trim();
     if (!target) {
-        alert('Please enter a target');
+        alert('Masukkan target terlebih dahulu');
         return;
     }
-    
-    // Get scan type dari dropdown
-    const scanType = document.getElementById('scanType').value;
+    if (!authToken) {
+        alert('Login dulu sebelum scan');
+        return;
+    }
 
-    addLog(`Starting ${scanType} scan for ${target}...`, 'info');
-    
-    // Get selected tools for quick scan
-    let playbook = 'regular-scan';
-    let selectedTools = [];
-    
-    if (scanType === 'quick') {
-        // Collect selected tools
-        const toolIds = ['dig', 'subfinder', 'nmap', 'httpx', 'whatweb', 'sslscan', 'nuclei', 'gobuster', 'nikto'];
-        for (let toolId of toolIds) {
-            const checkbox = document.getElementById('tool-' + toolId);
-            if (checkbox && checkbox.checked) {
-                selectedTools.push(toolId);
-            }
-        }
-        
-        if (selectedTools.length === 0) {
-            alert('Please select at least one tool for Quick Scan');
+    let scanType, tools;
+    if (currentMode === 'quick') {
+        tools = [...document.querySelectorAll('.quick-tool:checked')].map(c => c.value);
+        if (tools.length === 0) {
+            alert('Pilih minimal 1 tool untuk Quick Scan');
             return;
         }
-        
-        // Create custom playbook name based on selected tools
-        playbook = 'quick-scan-' + selectedTools.join('-');
-        addLog(`Selected tools: ${selectedTools.join(', ')}`, 'info');
-    } else if (scanType === 'full') {
-        playbook = 'full-scan-ai';
+        scanType = 'quick';
+    } else if (currentMode === 'full') {
+        scanType = 'full-scan-ai';
+    } else {
+        scanType = 'regular';
     }
-    
-    const payload = {
-        target: target,
-        playbook: playbook,
-        selectedTools: selectedTools  // Send selected tools to backend
-    };
 
-    fetch(`${API_BASE}/api/scan/playbook`, {
+    const payload = { target, scanType };
+    if (tools) payload.tools = tools;
+    if (currentMode === 'full') {
+        payload.model = document.getElementById('aiEngine').value;
+        payload.objective = document.getElementById('aiObjective').value;
+    }
+
+    addLog(`Memulai ${scanType} scan untuk ${target}...`, 'info');
+
+    fetch(`${API_BASE}/api/scan`, {
         method: 'POST',
-        headers: { 
+        headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${authToken}`
         },
@@ -775,91 +850,243 @@ function startScan() {
     })
     .then(r => r.json())
     .then(data => {
-        if (data.id) {
+        if (data && data.id) {
             currentScanId = data.id;
-            addLog(`Scan started: ${data.id}`, 'success');
+            addLog(`Scan ID: ${data.id}`, 'success');
+            document.getElementById('scanStatus').innerHTML =
+                `<span class="status-badge running">RUNNING</span> <p style="margin-top:10px;">Scan dimulai... polling status.</p>`;
             pollScanStatus();
         } else {
-            addLog(`Error: ${data.error || 'Unknown error'}`, 'error');
+            const errMsg = (data && data.error) || 'Unknown error';
+            addLog('Error: ' + errMsg, 'error');
+            document.getElementById('scanStatus').innerHTML =
+                `<span class="status-badge failed">FAILED</span> <p style="margin-top:10px;">${errMsg}</p>`;
         }
     })
     .catch(err => {
-        addLog(`Error starting scan: ${err.message}`, 'error');
+        addLog('Error starting scan: ' + err.message, 'error');
+        document.getElementById('scanStatus').innerHTML =
+            `<span class="status-badge failed">ERROR</span> <p style="margin-top:10px;">${err.message}</p>`;
     });
 }
 
 function pollScanStatus() {
     if (!currentScanId) return;
-
     fetch(`${API_BASE}/api/scan/${currentScanId}`, {
         headers: { 'Authorization': `Bearer ${authToken}` }
     })
-        .then(r => r.json())
-        .then(data => {
-            updateScanStatus(data);
-            
-            if (data.status === 'running') {
-                setTimeout(pollScanStatus, 1000);
-            } else if (data.status === 'completed') {
-                addLog('Scan completed', 'success');
-                displayResults(data);
-            } else if (data.status === 'failed') {
-                addLog(`Scan failed: ${data.error}`, 'error');
-            }
-        })
-        .catch(err => {
-            addLog(`Polling error: ${err.message}`, 'error');
-        });
+    .then(r => r.json())
+    .then(data => {
+        updateScanStatus(data);
+        if (data.status === 'running' || data.status === 'pending') {
+            setTimeout(pollScanStatus, 1500);
+        } else if (data.status === 'completed') {
+            stopPolling = true;
+            latestScan = data;
+            addLog('Scan completed ✓', 'success');
+            displayResults(data);
+            renderFindings();
+            renderReport();
+            switchPanel('report', document.querySelector('.nav-btn:nth-child(2)'));
+        } else if (data.status === 'failed') {
+            addLog('Scan failed: ' + (data.error || ''), 'error');
+        }
+    })
+    .catch(err => addLog('Polling error: ' + err.message, 'error'));
 }
 
 function updateScanStatus(scan) {
-    const status = document.getElementById('scanStatus');
+    const el = document.getElementById('scanStatus');
     const badge = `<span class="status-badge ${scan.status}">${scan.status.toUpperCase()}</span>`;
-    
-    const info = `
-        <p>${badge}</p>
-        <p><strong>Target:</strong> ${scan.target}</p>
-        <p><strong>Started:</strong> ${new Date(scan.started_at).toLocaleTimeString()}</p>
-        <p><strong>Status:</strong> ${scan.status}</p>
+    el.innerHTML = `
+        ${badge}
+        <p style="margin-top:10px;"><strong>Target:</strong> ${scan.target || '-'}</p>
+        <p><strong>Started:</strong> ${scan.started_at ? new Date(scan.started_at).toLocaleTimeString() : '-'}</p>
+        <p><strong>Results:</strong> ${scan.results ? scan.results.length : 0} tool output</p>
+        <p><strong>Findings:</strong> ${scan.findings ? scan.findings.length : 0}</p>
     `;
-    
-    status.innerHTML = info;
 }
 
 function displayResults(scan) {
-    const results = document.getElementById('scanResults');
-    let html = '<h3>Tool Results</h3>';
-    
-    console.log('displayResults called with:', scan);
-    console.log('Results array:', scan.results);
-    
-    if (scan.results && scan.results.length > 0) {
-        scan.results.forEach((result, i) => {
-            const argsStr = result.args ? result.args.join(', ') : 'N/A';
-            const stdoutPreview = result.stdout ? `<pre style="background: var(--bg); padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 0.85em; max-height: 200px; overflow-y: auto;">${escapeHtml(result.stdout.substring(0, 800))}</pre>` : '<p style="opacity: 0.5;">No output captured</p>';
-            
-            html += `
-                <div class="card" style="margin-bottom: 10px; border: 1px solid var(--border); padding: 15px; border-radius: 4px;">
-                    <h4 style="margin-top: 0;">✅ ${i + 1}. ${result.tool_name}</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
-                        <p><strong>Status:</strong> ${result.success ? '✅ Success' : '❌ Failed'}</p>
-                        <p><strong>Exit Code:</strong> ${result.exit_code}</p>
-                        <p><strong>Duration:</strong> ${result.duration_ms}ms</p>
-                        <p><strong>Target:</strong> ${result.target}</p>
-                    </div>
-                    ${result.command ? `<p><strong>Command:</strong> <code>${escapeHtml(result.command)}</code></p>` : ''}
-                    ${result.args && result.args.length > 0 ? `<p><strong>Args:</strong> <code>${escapeHtml(argsStr)}</code></p>` : ''}
-                    <div><strong>Output:</strong></div>
-                    ${stdoutPreview}
-                </div>
-            `;
-        });
-        console.log('Rendered results:', html);
-    } else {
-        html += '<p style="opacity: 0.7;">No results available</p>';
+    const el = document.getElementById('scanResults');
+    if (!scan.results || scan.results.length === 0) {
+        el.innerHTML = '<p style="opacity:0.7;">Tidak ada hasil tool output.</p>';
+        return;
     }
-    
-    results.innerHTML = html;
+    el.innerHTML = scan.results.map((r, i) => `
+        <div class="result-item">
+            <h4>${r.success ? '✅' : '❌'} ${i+1}. ${escapeHtml(r.tool_name)}</h4>
+            <p><strong>Status:</strong> ${r.success ? 'Success' : 'Failed'} · <strong>Exit:</strong> ${r.exit_code ?? '-'} · <strong>Durasi:</strong> ${r.duration_ms ?? '-'}ms</p>
+            ${r.command ? `<p><strong>Command:</strong> <code>${escapeHtml(r.command)}</code></p>` : ''}
+            <pre>${escapeHtml((r.stdout || '')).substring(0, 1500)}</pre>
+            ${r.stderr ? `<pre style="border-left:2px solid var(--error);">${escapeHtml(r.stderr).substring(0, 500)}</pre>` : ''}
+        </div>
+    `).join('');
+}
+
+// ============================================================================
+// FINDINGS
+// ============================================================================
+function renderFindings() {
+    const findingsArr = (latestScan && latestScan.findings) || findings;
+    const sev = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    findingsArr.forEach(f => { sev[(f.severity || 'info').toLowerCase()] = (sev[(f.severity || 'info').toLowerCase()] || 0) + 1; });
+
+    document.getElementById('severitySummary').innerHTML = `
+        <div class="severity-box critical"><div class="count">${sev.critical}</div><div class="label">🔴 Critical</div></div>
+        <div class="severity-box high"><div class="count">${sev.high}</div><div class="label">🟠 High</div></div>
+        <div class="severity-box medium"><div class="count">${sev.medium}</div><div class="label">🟡 Medium</div></div>
+        <div class="severity-box low"><div class="count">${sev.low}</div><div class="label">🟢 Low</div></div>
+        <div class="severity-box info"><div class="count">${sev.info}</div><div class="label">ℹ️ Info</div></div>
+    `;
+
+    if (findingsArr.length === 0) {
+        document.getElementById('findingsList').innerHTML = '<div style="opacity:0.7;">Belum ada findings.</div>';
+        return;
+    }
+    document.getElementById('findingsList').innerHTML = findingsArr.map(f => `
+        <div class="finding-item ${(f.severity || 'info').toLowerCase()}">
+            <div class="finding-header" style="display:flex; justify-content:space-between;">
+                <span class="severity-${(f.severity || 'info').toLowerCase()}">${(f.severity || 'INFO').toUpperCase()}</span>
+                <span style="opacity:0.6; font-size:0.85em;">${escapeHtml(f.tool_source || f.tool || '')}</span>
+            </div>
+            <strong>${escapeHtml(f.title || 'Finding')}</strong>
+            <div style="font-size:0.9em; margin-top:6px;">${escapeHtml(f.description || f.evidence || '')}</div>
+        </div>
+    `).join('');
+}
+
+// ============================================================================
+// REPORT (hostedscan-style + print PDF)
+// ============================================================================
+function renderReport() {
+    const emptyEl = document.getElementById('reportEmpty');
+    if (!latestScan) {
+        emptyEl.style.display = 'block';
+        document.getElementById('reportMeta').innerHTML = '';
+        document.getElementById('reportSeverity').innerHTML = '';
+        document.getElementById('reportFindings').innerHTML = '';
+        document.getElementById('reportTools').innerHTML = '';
+        return;
+    }
+    emptyEl.style.display = 'none';
+
+    const s = latestScan;
+    const started = s.started_at ? new Date(s.started_at).toLocaleString() : '-';
+    document.getElementById('reportTitle').textContent = `📄 Scan Report — ${s.target || ''}`;
+    document.getElementById('reportMeta').innerHTML = `
+        <div class="report-meta">
+            <div><span>Target</span>${escapeHtml(s.target || '-')}</div>
+            <div><span>Scan ID</span>${escapeHtml(s.id || '-')}</div>
+            <div><span>Mulai</span>${started}</div>
+            <div><span>Status</span>${s.status}</div>
+            <div><span>Mode</span>${escapeHtml(s.scan_type || s.playbook || 'regular')}</div>
+            <div><span>Tools</span>${s.results ? s.results.length : 0} executed</div>
+        </div>
+    `;
+
+    const findingsArr = s.findings || [];
+    const sev = { critical: 0, high: 0, medium: 0, low: 0, info: 0 };
+    findingsArr.forEach(f => { sev[(f.severity || 'info').toLowerCase()] = (sev[(f.severity || 'info').toLowerCase()] || 0) + 1; });
+    document.getElementById('reportSeverity').innerHTML = `
+        <div class="severity-summary">
+            <div class="severity-box critical"><div class="count">${sev.critical}</div><div class="label">Critical</div></div>
+            <div class="severity-box high"><div class="count">${sev.high}</div><div class="label">High</div></div>
+            <div class="severity-box medium"><div class="count">${sev.medium}</div><div class="label">Medium</div></div>
+            <div class="severity-box low"><div class="count">${sev.low}</div><div class="label">Low</div></div>
+            <div class="severity-box info"><div class="count">${sev.info}</div><div class="label">Info</div></div>
+        </div>
+    `;
+
+    const findingsRows = findingsArr.map(f => `
+        <tr>
+            <td><span class="severity-${(f.severity || 'info').toLowerCase()}">${(f.severity || 'INFO').toUpperCase()}</span></td>
+            <td>${escapeHtml(f.title || '-')}</td>
+            <td>${escapeHtml(f.tool_source || f.tool || '-')}</td>
+            <td style="font-size:0.9em;">${escapeHtml(f.description || f.evidence || '')}</td>
+        </tr>
+    `).join('');
+    document.getElementById('reportFindings').innerHTML = findingsArr.length ? `
+        <h3 style="margin:20px 0 10px;">Findings</h3>
+        <table class="report-table">
+            <thead><tr><th>Severity</th><th>Title</th><th>Tool</th><th>Deskripsi</th></tr></thead>
+            <tbody>${findingsRows}</tbody>
+        </table>
+    ` : '<p style="opacity:0.6;">Tidak ada findings terkonfirmasi.</p>';
+
+    const toolRows = (s.results || []).map(r => `
+        <tr>
+            <td>${r.success ? '✅' : '❌'} ${escapeHtml(r.tool_name || '-')}</td>
+            <td>${r.exit_code ?? '-'}</td>
+            <td>${r.duration_ms ?? '-'}ms</td>
+            <td style="font-size:0.85em; max-width:500px;">${escapeHtml((r.stdout || r.stderr || '')).substring(0, 200)}</td>
+        </tr>
+    `).join('');
+    document.getElementById('reportTools').innerHTML = (s.results || []).length ? `
+        <h3 style="margin:20px 0 10px;">Tool Execution Summary</h3>
+        <table class="report-table">
+            <thead><tr><th>Tool</th><th>Exit</th><th>Durasi</th><th>Output (preview)</th></tr></thead>
+            <tbody>${toolRows}</tbody>
+        </table>
+    ` : '';
+}
+
+function exportReportHTML() {
+    const reportContent = document.getElementById('report').innerHTML;
+    const full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ujiscan Report</title><style>body{font-family:sans-serif;margin:40px;color:#222;}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#f0f0f0}</style></head><body>${reportContent}</body></html>`;
+    const blob = new Blob([full], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ujiscan-report-${latestScan ? latestScan.target : 'scan'}.html`;
+    a.click();
+}
+
+// ============================================================================
+// LOGS
+// ============================================================================
+function addLog(msg, type = 'info') {
+    logs.unshift({ msg, type, time: new Date().toLocaleTimeString() });
+    const el = document.getElementById('logsList');
+    if (el) {
+        const firstChild = el.querySelector('.log-entry');
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        el.insertBefore(entry, firstChild);
+    }
+}
+
+function clearLogs() {
+    document.getElementById('logsList').innerHTML = '';
+    logs = [];
+}
+
+// ============================================================================
+// TOOLS
+// ============================================================================
+function loadTools() {
+    const el = document.getElementById('toolsList');
+    if (!authToken) {
+        el.innerHTML = '<p style="opacity:0.7;">Login dulu untuk melihat tools.</p>';
+        return;
+    }
+    fetch(`${API_BASE}/api/tools`, {
+        headers: { 'Authorization': `Bearer ${authToken}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!Array.isArray(data)) throw new Error('Invalid response');
+        el.innerHTML = `<div class="tool-grid">` + data.map(t => `
+            <div class="tool-item" style="display:block; padding:12px;">
+                <strong>${escapeHtml(t.name)}</strong>
+                <div style="font-size:0.8em; opacity:0.7;">${escapeHtml(t.description || '')}</div>
+                <div style="font-size:0.75em; margin-top:4px; color: var(--success);">${t.available ? '● tersedia' : '○ streaming'}</div>
+            </div>
+        `).join('') + `</div>`;
+    })
+    .catch(err => {
+        el.innerHTML = `<p style="color:var(--error);">Error loading tools: ${escapeHtml(err.message)}</p>`;
+    });
 }
 
 function escapeHtml(text) {
@@ -869,90 +1096,20 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function loadTools() {
-    const token = localStorage.getItem('ujiscan_token');
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+// ============================================================================
+// INIT
+// ============================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
     }
-
-    fetch(`${API_BASE}/api/tools`, { headers })
-        .then(r => r.json())
-        .then(tools => {
-            const list = document.getElementById('toolsList');
-            if (tools && tools.length > 0) {
-                let html = '<table style="width: 100%; border-collapse: collapse;">';
-                html += '<tr style="border-bottom: 1px solid var(--border);"><th style="text-align: left; padding: 10px;">Name</th><th>Description</th><th>Status</th></tr>';
-                
-                tools.forEach(tool => {
-                    const status = tool.available ? '✅ Available' : '❌ Not Found';
-                    html += `
-                        <tr style="border-bottom: 1px solid var(--border);">
-                            <td style="padding: 10px; font-weight: 600;">${tool.name}</td>
-                            <td style="padding: 10px;">${tool.description}</td>
-                            <td style="padding: 10px;">${status}</td>
-                        </tr>
-                    `;
-                });
-                
-                html += '</table>';
-                list.innerHTML = html;
-            } else {
-                list.innerHTML = '<p style="opacity: 0.7;">No tools available</p>';
-            }
-        })
-        .catch(err => {
-            document.getElementById('toolsList').innerHTML = `<p style="color: var(--error);">Error loading tools: ${err.message}</p>`;
-        });
-}
-
-function addLog(message, type = 'info') {
-    const timestamp = new Date().toLocaleTimeString();
-    const entry = `[${timestamp}] ${message}`;
-    logs.push({ message: entry, type });
-    
-    const logsList = document.getElementById('logsList');
-    const div = document.createElement('div');
-    div.className = `log-entry ${type}`;
-    div.textContent = entry;
-    logsList.appendChild(div);
-    logsList.scrollTop = logsList.scrollHeight;
-}
-
-function clearLogs() {
-    logs = [];
-    document.getElementById('logsList').innerHTML = '<div style="opacity: 0.7;">Logs cleared</div>';
-}
-
-function addScopePattern() {
-    const pattern = document.getElementById('scopePattern').value;
-    const type = document.getElementById('scopeType').value;
-    
-    if (!pattern) {
-        alert('Please enter a pattern');
-        return;
-    }
-    
-    addLog(`Added ${type} pattern: ${pattern}`, 'info');
-    addLog('Note: Scope patterns not persisted yet', 'warning');
-}
-
-function applyScopeMode() {
-    const mode = document.getElementById('scopeMode').value;
-    addLog(`Scope mode set to: ${mode}`, 'info');
-    addLog('Note: Scope mode not persisted yet', 'warning');
-}
-
-function removeScope(pattern) {
-    addLog(`Removed scope pattern: ${pattern}`, 'info');
-}
-
-// Initialize
-window.addEventListener('load', () => {
-    const theme = localStorage.getItem('theme') || 'dark';
-    document.documentElement.setAttribute('data-theme', theme);
+    refreshAuthUI();
+    renderQuickTools();
+    addLog('ujiscan frontend ready (' + (isLocalhost ? 'localhost' : 'github pages') + ')', 'info');
+    if (authToken) loadTools();
 });
     </script>
 </body>
