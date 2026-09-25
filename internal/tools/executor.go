@@ -1,179 +1,153 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 	"time"
-
-	"github.com/google/uuid"
-	"github.com/rudi-asr/ujiscan/internal/models"
 )
 
-// Executor handles tool execution
+// Executor runs tools and captures their output
 type Executor struct {
-	toolRegistry map[string]*models.ToolConfig
-	timeout      time.Duration
+	registry *Registry
 }
 
 // NewExecutor creates a new tool executor
-func NewExecutor() *Executor {
+func NewExecutor(registry *Registry) *Executor {
 	return &Executor{
-		toolRegistry: make(map[string]*models.ToolConfig),
-		timeout:      30 * time.Second,
+		registry: registry,
 	}
 }
 
-// RegisterTool adds a tool to the registry
-func (e *Executor) RegisterTool(cfg *models.ToolConfig) error {
-	// Check if binary exists
-	_, err := exec.LookPath(cfg.BinaryPath)
-	if err != nil {
-		cfg.Available = false
-		return fmt.Errorf("tool %s not found at %s: %w", cfg.Name, cfg.BinaryPath, err)
+// Execute runs a tool and returns results
+func (e *Executor) Execute(ctx context.Context, toolName string, params map[string]string) (*ToolExecutionResult, error) {
+	result := &ToolExecutionResult{
+		ToolName: toolName,
+		Success:  false,
 	}
 
-	cfg.Available = true
-	e.toolRegistry[cfg.Name] = cfg
-	return nil
-}
-
-// GetToolConfig returns a tool configuration
-func (e *Executor) GetToolConfig(toolName string) *models.ToolConfig {
-	return e.toolRegistry[toolName]
-}
-
-// ListTools returns all registered tools
-func (e *Executor) ListTools() []*models.ToolConfig {
-	tools := make([]*models.ToolConfig, 0, len(e.toolRegistry))
-	for _, cfg := range e.toolRegistry {
-		tools = append(tools, cfg)
-	}
-	return tools
-}
-
-// RunTool executes a tool with given arguments
-func (e *Executor) RunTool(toolName string, args []string, phase models.PhaseType, target string) (*models.ToolOutput, error) {
-	cfg := e.toolRegistry[toolName]
-	if cfg == nil {
-		return nil, fmt.Errorf("tool %s not registered", toolName)
+	// Get tool definition
+	tool := e.registry.GetTool(toolName)
+	if tool == nil {
+		result.Error = fmt.Sprintf("Tool %s not found in registry", toolName)
+		return result, fmt.Errorf(result.Error)
 	}
 
-	if !cfg.Available {
-		return nil, fmt.Errorf("tool %s not available", toolName)
-	}
-
-	output := &models.ToolOutput{
-		ID:        uuid.New().String(),
-		ToolName:  toolName,
-		Target:    target,
-		Phase:     phase,
-		Command:   cfg.BinaryPath,
-		Args:      args,
-		StartedAt: time.Now(),
-	}
-
-	// Create context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.Timeout)*time.Second)
-	defer cancel()
-
-	// Build command
-	cmd := exec.CommandContext(ctx, cfg.BinaryPath, args...)
-
-	// Capture stdout and stderr
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	// Run command with timeout enforcement
-	done := make(chan error, 1)
-	go func() {
-		done <- cmd.Run()
-	}()
-
-	// Wait for completion or timeout
-	var err error
-	select {
-	case err = <-done:
-		// Command finished
-	case <-ctx.Done():
-		// Context timeout - kill process
-		if cmd.Process != nil {
-			cmd.Process.Kill()
+	// Check if installed
+	if !e.registry.IsInstalled(toolName) {
+		if err := e.InstallTool(ctx, toolName); err != nil {
+			result.Error = fmt.Sprintf("Failed to install tool: %v", err)
+			return result, err
 		}
-		err = ctx.Err()
 	}
-	output.EndedAt = time.Now()
-	output.Duration = int(output.EndedAt.Sub(output.StartedAt).Milliseconds())
-	output.Stdout = stdout.String()
-	output.Stderr = stderr.String()
 
-	// Handle exit code
+	// Build execute command by substituting params
+	cmdStr := e.buildCommand(tool.ExecuteTemplate, params)
+
+	// Execute
+	start := time.Now()
+	cmd := exec.CommandContext(ctx, "sh", "-c", cmdStr)
+
+	output, err := cmd.CombinedOutput()
+	result.Duration = int(time.Since(start).Seconds())
+
 	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			output.Error = fmt.Sprintf("tool %s timed out after %d seconds", toolName, cfg.Timeout)
-			output.ExitCode = -1
-		} else if exitErr, ok := err.(*exec.ExitError); ok {
-			output.ExitCode = exitErr.ExitCode()
-			output.Error = exitErr.Error()
+		if ctx.Err() != nil {
+			result.Error = "Execution canceled"
 		} else {
-			output.ExitCode = -1
-			output.Error = err.Error()
+			result.Error = fmt.Sprintf("Execution failed: %v", err)
 		}
-		output.Success = false
-	} else {
-		output.ExitCode = 0
-		output.Success = true
+		result.Stderr = string(output)
+		return result, err
 	}
 
-	return output, nil
+	result.Success = true
+	result.ExitCode = cmd.ProcessState.ExitCode()
+	result.Stdout = string(output)
+
+	// Update last used
+	e.registry.UpdateLastUsed(toolName)
+
+	return result, nil
 }
 
-// InitializeDefaultTools registers standard tools
-func (e *Executor) InitializeDefaultTools() error {
-	tools := []*models.ToolConfig{
-		{
-			Name:        "nmap",
-			BinaryPath:  "nmap",
-			Description: "Network mapper - service/OS discovery",
-			Timeout:     20,
-			OutputType:  "json",
-		},
-		{
-			Name:        "nuclei",
-			BinaryPath:  "nuclei",
-			Description: "Vulnerability scanner - template-based",
-			Timeout:     30,
-			OutputType:  "json",
-		},
-		{
-			Name:        "curl",
-			BinaryPath:  "curl",
-			Description: "HTTP client - web probing",
-			Timeout:     10,
-			OutputType:  "text",
-		},
-		{
-			Name:        "dig",
-			BinaryPath:  "dig",
-			Description: "DNS lookup - domain enumeration",
-			Timeout:     5,
-			OutputType:  "text",
-		},
-		{
-			Name:        "whois",
-			BinaryPath:  "whois",
-			Description: "WHOIS lookup - domain information",
-			Timeout:     10,
-			OutputType:  "text",
-		},
+// InstallTool installs a tool
+func (e *Executor) InstallTool(ctx context.Context, toolName string) error {
+	tool := e.registry.GetTool(toolName)
+	if tool == nil {
+		return fmt.Errorf("Tool %s not found", toolName)
 	}
 
-	for _, tool := range tools {
-		// Register but don't fail if not available
-		_ = e.RegisterTool(tool)
+	// Check platform compatibility
+	if !e.isPlatformSupported(tool) {
+		return fmt.Errorf("Tool %s not supported on this platform", toolName)
+	}
+
+	// Run install command
+	cmd := exec.CommandContext(ctx, "sh", "-c", tool.InstallCommand)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		e.registry.SetInstallationError(toolName, fmt.Sprintf("Install failed: %s", string(output)))
+		return err
+	}
+
+	// Verify installation
+	if err := e.VerifyTool(ctx, toolName); err != nil {
+		e.registry.SetInstallationError(toolName, fmt.Sprintf("Verification failed: %v", err))
+		return err
+	}
+
+	// Mark as installed
+	e.registry.SetInstalled(toolName, "latest", "")
+	return nil
+}
+
+// VerifyTool checks if a tool is properly installed
+func (e *Executor) VerifyTool(ctx context.Context, toolName string) error {
+	tool := e.registry.GetTool(toolName)
+	if tool == nil {
+		return fmt.Errorf("Tool %s not found", toolName)
+	}
+
+	cmd := exec.CommandContext(ctx, "sh", "-c", tool.VerifyCommand)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("verification failed: %w", err)
 	}
 
 	return nil
+}
+
+// buildCommand substitutes parameters into execute template
+func (e *Executor) buildCommand(template string, params map[string]string) string {
+	cmd := template
+	for key, value := range params {
+		placeholder := "{{ " + key + " }}"
+		cmd = strings.ReplaceAll(cmd, placeholder, value)
+	}
+	return cmd
+}
+
+// isPlatformSupported checks if tool runs on current OS
+func (e *Executor) isPlatformSupported(tool *Tool) bool {
+	currentOS := os.Getenv("GOOS")
+	if currentOS == "" {
+		// Default to current system
+		return true
+	}
+
+	for _, platform := range tool.Platforms {
+		if platform == currentOS || platform == "all" {
+			return true
+		}
+	}
+	return false
+}
+
+// ListTools returns all available tools (stub for legacy API)
+func (e *Executor) ListTools() map[string]*Tool {
+	if e.registry != nil {
+		return e.registry.ListTools()
+	}
+	return make(map[string]*Tool)
 }

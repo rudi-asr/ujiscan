@@ -1,0 +1,56 @@
+version: "1.0"
+tools:
+  nmap:
+    name: "nmap"
+    description: "Network mapper - network discovery and port scanning"
+    category: "recon"
+    install_command: "brew install nmap || apt-get install -y nmap"
+    verify_command: "nmap --version"
+    execute_template: "nmap {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "7.0"
+    parser_strategy: "nmap_xml"
+
+  nuclei:
+    name: "nuclei"
+    description: "Vulnerability scanner with templates"
+    category: "scanning"
+    install_command: "go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest || apt-get install -y nuclei"
+    verify_command: "nuclei -version"
+    execute_template: "nuclei -u {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "3.0"
+    parser_strategy: "nuclei_json"
+
+  ffuf:
+    name: "ffuf"
+    description: "Web directory/parameter fuzzer"
+    category: "scanning"
+    install_command: "go install github.com/ffuf/ffuf/v2@latest || apt-get install -y ffuf"
+    verify_command: "ffuf -version"
+    execute_template: "ffuf -u {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "2.0"
+    parser_strategy: "ffuf_json"
+
+  subfinder:
+    name: "subfinder"
+    description: "Subdomain discovery tool"
+    category: "recon"
+    install_command: "go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+    verify_command: "subfinder -version"
+    execute_template: "subfinder -d {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "2.6"
+    parser_strategy: "subfinder_json"
+
+  curl:
+    name: "curl"
+    description: "HTTP client for testing APIs"
+    category: "tools"
+    install_command: "brew install curl || apt-get install -y curl"
+    verify_command: "curl --version"
+    execute_template: "curl {{ target }} {{ args }}"
+    platforms: ["darwin", "linux", "windows"]
+    min_version: "7.0"
+    parser_strategy: "raw"
