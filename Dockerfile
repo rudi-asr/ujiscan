@@ -1,6 +1,7 @@
 # Dockerfile for ujiscan - builds with sqlite3 support
 
-FROM golang:1.23 AS builder
+# Stage 1: Builder
+FROM golang:1.25 AS builder
 
 WORKDIR /build
 
@@ -22,14 +23,24 @@ RUN go mod download
 COPY . .
 
 # Build with CGO for SQLite
-RUN CGO_ENABLED=1 go build -o ujiscan .
+RUN CGO_ENABLED=1 go build -o ujiscan . \
+    && mkdir -p /build/go-tools
+
+# Build Go-based security tools (subfinder, httpx, nuclei, gobuster) as static binaries
+# Pin to versions compatible with Go 1.25 toolchain
+RUN go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@v2.6.6 \
+    && go install github.com/projectdiscovery/httpx/cmd/httpx@v1.6.10 \
+    && go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@v3.3.7 \
+    && go install github.com/OJ/gobuster/v3@v3.6.0 \
+    && ls /go/bin/
 
 # Stage 2: Runtime
 FROM debian:bookworm-slim
 
 WORKDIR /app
 
-# Install runtime dependencies + scanning tools
+# Install runtime dependencies + all 9 hostedscan scanning tools
+# apt-based: dig (dnsutils), nmap, whatweb, sslscan
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libsqlite3-0 \
@@ -39,7 +50,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     nmap \
     net-tools \
     iputils-ping \
+    whatweb \
+    sslscan \
     && rm -rf /var/lib/apt/lists/*
+
+# Copy Go security tools from builder (subfinder, httpx, nuclei, gobuster)
+COPY --from=builder /go/bin/ /usr/local/bin/
+
+# Install nikto (not in Debian repos) - official tarball
+RUN apt-get update && apt-get install -y --no-install-recommends perl libnet-ssleay-perl \
+    && rm -rf /var/lib/apt/lists/* \
+    && wget -q https://github.com/sullo/nikto/archive/refs/heads/master.tar.gz -O /tmp/nikto.tar.gz \
+    && mkdir -p /opt/nikto \
+    && tar -xzf /tmp/nikto.tar.gz -C /opt/nikto --strip-components=1 \
+    && chmod +x /opt/nikto/program/nikto.pl \
+    && ln -sf /opt/nikto/program/nikto.pl /usr/local/bin/nikto \
+    && rm -f /tmp/nikto.tar.gz
 
 # Copy binary from builder
 COPY --from=builder /build/ujiscan .
