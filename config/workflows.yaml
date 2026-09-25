@@ -1,0 +1,137 @@
+workflows:
+  web_standard:
+    name: "web_standard"
+    description: "Standard web application penetration test workflow"
+    version: "1.0"
+    timeout: 3600
+    steps:
+      - id: "recon_nmap"
+        name: "Network Reconnaissance with nmap"
+        tool: "nmap"
+        parameters:
+          target: "{{ Target }}"
+          args: "-sV -sC --open"
+        timeout: 300
+        max_retries: 2
+        capture: "nmap_results"
+      
+      - id: "scan_nuclei"
+        name: "Vulnerability Scanning with nuclei"
+        tool: "nuclei"
+        parameters:
+          target: "{{ Target }}"
+          args: "-t cves -severity high,critical"
+        timeout: 300
+        max_retries: 1
+        when: "nmap_results"
+        capture: "nuclei_findings"
+      
+      - id: "analyze_findings"
+        name: "AI Analysis of Findings"
+        tool: "claude-analyzer"
+        parameters:
+          findings: "{{ nuclei_findings }}"
+          target: "{{ Target }}"
+        timeout: 180
+        max_retries: 0
+        capture: "analysis_result"
+
+  network_deep:
+    name: "network_deep"
+    description: "Deep network reconnaissance and scanning"
+    version: "1.0"
+    timeout: 5400
+    steps:
+      - id: "nmap_network"
+        name: "Network-wide scan"
+        tool: "nmap"
+        parameters:
+          target: "{{ Target }}"
+          args: "-sP -n"
+        timeout: 600
+        max_retries: 1
+      
+      - id: "masscan_fast"
+        name: "Fast mass scanning"
+        tool: "masscan"
+        parameters:
+          target: "{{ Target }}"
+          args: "-p0-65535 --rate=1000"
+        timeout: 900
+        max_retries: 1
+
+  cloud_infra:
+    name: "cloud_infra"
+    description: "Cloud infrastructure assessment"
+    version: "1.0"
+    timeout: 3600
+    steps:
+      - id: "cloud_recon"
+        name: "Cloud infrastructure discovery"
+        tool: "cloud-scanner"
+        parameters:
+          target: "{{ Target }}"
+          args: "--regions all"
+        timeout: 300
+        max_retries: 1
+      
+      - id: "config_audit"
+        name: "Configuration audit"
+        tool: "nuclei"
+        parameters:
+          target: "{{ Target }}"
+          args: "-t cloud"
+        timeout: 300
+
+  aggressive_test:
+    name: "aggressive_test"
+    description: "Aggressive red-team style penetration test"
+    version: "1.0"
+    timeout: 7200
+    steps:
+      - id: "full_recon"
+        name: "Full reconnaissance"
+        tool: "nmap"
+        parameters:
+          target: "{{ Target }}"
+          args: "-sV -sC -O -A --script all"
+        timeout: 600
+        max_retries: 2
+      
+      - id: "aggressive_scan"
+        name: "Aggressive vulnerability scanning"
+        tool: "nuclei"
+        parameters:
+          target: "{{ Target }}"
+          args: "-t cves -severity critical,high"
+        timeout: 600
+      
+      - id: "exploitation"
+        name: "Exploitation attempts"
+        tool: "metasploit"
+        parameters:
+          target: "{{ Target }}"
+        timeout: 900
+        max_retries: 1
+
+  quick_scan:
+    name: "quick_scan"
+    description: "Quick priority finding scan"
+    version: "1.0"
+    timeout: 1800
+    steps:
+      - id: "quick_nuclei"
+        name: "Quick vulnerability scan"
+        tool: "nuclei"
+        parameters:
+          target: "{{ Target }}"
+          args: "-t cves -severity critical"
+        timeout: 300
+        max_retries: 0
+      
+      - id: "quick_analysis"
+        name: "Quick AI analysis"
+        tool: "claude-analyzer"
+        parameters:
+          target: "{{ Target }}"
+        timeout: 120
