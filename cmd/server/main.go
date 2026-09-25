@@ -274,21 +274,13 @@ func Run() error {
 	mux.HandleFunc("PUT /api/notifications/{id}/read", requireAuth(dashboardHandler.HandleMarkNotificationAsRead))
 	mux.HandleFunc("DELETE /api/notifications/{id}", requireAuth(dashboardHandler.HandleDeleteNotification))
 
-	// Phase B agent routes
+	// Phase B agent routes (most specific first)
+	mux.HandleFunc("GET /api/agents/tasks/{id}/wait", requireAuth(agentHandler.HandleWaitTask))
+	mux.HandleFunc("GET /api/agents/tasks/{id}", requireAuth(agentHandler.HandleGetTask))
+	mux.HandleFunc("DELETE /api/agents/tasks/{id}", requireAuth(agentHandler.HandleCancelTask))
 	mux.HandleFunc("POST /api/agents/submit", requireAuth(agentHandler.HandleSubmit))
 	mux.HandleFunc("GET /api/agents/status", requireAuth(agentHandler.HandleStatus))
 	mux.HandleFunc("GET /api/agents/tasks", requireAuth(agentHandler.HandleListTasks))
-	mux.HandleFunc("GET /api/agents/tasks/{id}/wait", requireAuth(agentHandler.HandleWaitTask))
-	mux.HandleFunc("/api/agents/tasks/{id}", requireAuth(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			agentHandler.HandleGetTask(w, r)
-		case http.MethodDelete:
-			agentHandler.HandleCancelTask(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	}))
 
 	mux.HandleFunc("/api/tools", apiHandler.HandleListTools)
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
