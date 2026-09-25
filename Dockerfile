@@ -42,6 +42,10 @@ COPY --from=builder /build/ujiscan .
 # Copy web assets
 COPY web ./web
 
+# Copy tool registry + playbooks (required for registry/playbook/agentic scans)
+COPY tools.yaml ./
+COPY playbooks ./playbooks
+
 # Create directory for database
 RUN mkdir -p /app/data
 

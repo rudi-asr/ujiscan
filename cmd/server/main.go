@@ -35,8 +35,11 @@ func Run() error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	// Initialize SQLite database
-	dbPath := filepath.Join(projectRoot, "ujiscan.db")
+	// Initialize SQLite database (DATABASE_PATH env overrides default — used by Docker)
+	dbPath := os.Getenv("DATABASE_PATH")
+	if dbPath == "" {
+		dbPath = filepath.Join(projectRoot, "ujiscan.db")
+	}
 	sqliteDB, err := db.InitDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to initialize database: %w", err)
@@ -367,13 +370,23 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 
 // corsMiddleware adds CORS headers to allow requests from GitHub Pages & localhost
 func corsMiddleware(next http.Handler) http.Handler {
+	// Default allowed origins (localhost dev + GitHub Pages dashboard)
+	allowedOrigins := map[string]bool{
+		"http://localhost:8081":      true,
+		"http://localhost:3000":      true,
+		"https://rudi-asr.github.io": true,
+	}
+	// Extend with CORS_ALLOWED_ORIGINS env (comma-separated) — used by Docker
+	for _, o := range strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",") {
+		if o = strings.TrimSpace(o); o != "" {
+			allowedOrigins[o] = true
+		}
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Allow requests from GitHub Pages and localhost
 		origin := r.Header.Get("Origin")
-		if origin == "https://rudi-asr.github.io" ||
-			origin == "http://localhost:8081" ||
-			origin == "http://localhost:3000" ||
-			strings.HasPrefix(origin, "http://127.0.0.1") {
+		if origin != "" && (allowedOrigins[origin] || strings.HasPrefix(origin, "http://127.0.0.1")) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		}
 
