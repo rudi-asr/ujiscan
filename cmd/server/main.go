@@ -8,12 +8,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/rudi-asr/ujiscan/internal/api"
 	"github.com/rudi-asr/ujiscan/internal/audit"
 	"github.com/rudi-asr/ujiscan/internal/auth"
 	"github.com/rudi-asr/ujiscan/internal/dashboard"
+	"github.com/rudi-asr/ujiscan/internal/db"
 	"github.com/rudi-asr/ujiscan/internal/engagement"
 	"github.com/rudi-asr/ujiscan/internal/executor"
+	"github.com/rudi-asr/ujiscan/internal/persistence"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/registry"
 	"github.com/rudi-asr/ujiscan/internal/store"
@@ -30,6 +34,19 @@ func Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
+
+	// Initialize SQLite database
+	dbPath := filepath.Join(projectRoot, "ujiscan.db")
+	sqliteDB, err := db.InitDB(dbPath)
+	if err != nil {
+		return fmt.Errorf("failed to initialize database: %w", err)
+	}
+	defer sqliteDB.Close()
+	log.Printf("✅ SQLite database initialized: %s", dbPath)
+
+	// Initialize persistence manager
+	pm := persistence.NewPersistenceManager(sqliteDB)
+	_ = pm  // Will be used for save/load operations
 
 	// Load registry from tools.yaml
 	toolsYAML := filepath.Join(projectRoot, "tools.yaml")
