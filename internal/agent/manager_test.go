@@ -117,7 +117,7 @@ func TestManagerRegisterAgent(t *testing.T) {
 		BaseAgent: BaseAgent{
 			AgentType: AgentTypeReconnaissance,
 			Status:    StatusIdle,
-			Metrics: &Metrics{},
+			Metrics:   &Metrics{},
 		},
 	}
 
@@ -140,7 +140,7 @@ func TestManagerSubmitTask(t *testing.T) {
 		BaseAgent: BaseAgent{
 			AgentType: AgentTypeReconnaissance,
 			Status:    StatusIdle,
-			Metrics: &Metrics{},
+			Metrics:   &Metrics{},
 		},
 	}
 
@@ -149,8 +149,8 @@ func TestManagerSubmitTask(t *testing.T) {
 	defer m.Stop()
 
 	task := &Task{
-		ID:        "test1",
-		AgentType: AgentTypeReconnaissance,
+		ID:           "test1",
+		AgentType:    AgentTypeReconnaissance,
 		EngagementID: "eng1",
 	}
 
@@ -196,7 +196,7 @@ func TestManagerExecution(t *testing.T) {
 		BaseAgent: BaseAgent{
 			AgentType: AgentTypeReconnaissance,
 			Status:    StatusIdle,
-			Metrics: &Metrics{},
+			Metrics:   &Metrics{},
 		},
 		executeFunc: func(ctx context.Context, task *Task) (interface{}, error) {
 			return map[string]interface{}{"hosts": []string{"192.168.1.1"}}, nil
@@ -208,8 +208,8 @@ func TestManagerExecution(t *testing.T) {
 	defer m.Stop()
 
 	task := &Task{
-		ID:        "test1",
-		AgentType: AgentTypeReconnaissance,
+		ID:           "test1",
+		AgentType:    AgentTypeReconnaissance,
 		EngagementID: "eng1",
 	}
 

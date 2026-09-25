@@ -13,6 +13,7 @@ import (
 	"github.com/rudi-asr/ujiscan/internal/api"
 	"github.com/rudi-asr/ujiscan/internal/audit"
 	"github.com/rudi-asr/ujiscan/internal/auth"
+	"github.com/rudi-asr/ujiscan/internal/compression"
 	"github.com/rudi-asr/ujiscan/internal/dashboard"
 	"github.com/rudi-asr/ujiscan/internal/db"
 	"github.com/rudi-asr/ujiscan/internal/engagement"
@@ -46,6 +47,26 @@ func Run() error {
 	}
 	defer sqliteDB.Close()
 	log.Printf("✅ SQLite database initialized: %s", dbPath)
+
+	// Create connection pool with optimizations
+	poolConfig := db.PoolConfig{
+		MaxOpenConns:    25,
+		MaxIdleConns:    5,
+		ConnMaxLifetime: 300,
+	}
+	dbPool := db.NewPool(sqliteDB, poolConfig)
+
+	// Apply SQLite optimizations
+	if err := dbPool.Optimize(); err != nil {
+		log.Printf("Warning: Failed to optimize database: %v", err)
+	}
+
+	// Add performance indexes
+	if err := dbPool.AddIndexes(); err != nil {
+		log.Printf("Warning: Failed to add indexes: %v", err)
+	}
+
+	log.Printf("✅ Database pool configured (maxOpen=%d, maxIdle=%d)", poolConfig.MaxOpenConns, poolConfig.MaxIdleConns)
 
 	// Initialize persistence manager
 	pm := persistence.NewPersistenceManager(sqliteDB)
@@ -348,7 +369,7 @@ func Run() error {
 	// Wrap mux with CORS and auth middleware
 	corsHandler := corsMiddleware(mux)
 	authMiddleware := auth.AuthMiddleware(tokenManager)
-	return http.ListenAndServe(Port, authMiddleware(corsHandler))
+	return http.ListenAndServe(Port, compression.Middleware(authMiddleware(corsHandler)))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {

@@ -9,13 +9,13 @@ import (
 
 // Manager manages all agents and the task queue
 type Manager struct {
-	mu          sync.RWMutex
-	agents      map[AgentType]Agent
-	queue       *TaskQueue
-	workers     int
-	running     bool
-	stopChan    chan struct{}
-	workerWg    sync.WaitGroup
+	mu       sync.RWMutex
+	agents   map[AgentType]Agent
+	queue    *TaskQueue
+	workers  int
+	running  bool
+	stopChan chan struct{}
+	workerWg sync.WaitGroup
 }
 
 // NewManager creates a new agent manager
@@ -177,18 +177,18 @@ func (m *Manager) GetStatus() map[string]interface{} {
 	for agentType, agent := range m.agents {
 		metrics := agent.GetMetrics()
 		agents = append(agents, map[string]interface{}{
-			"type":      agentType,
-			"status":    agent.GetStatus(),
-			"metrics":   metrics,
+			"type":    agentType,
+			"status":  agent.GetStatus(),
+			"metrics": metrics,
 		})
 	}
 	m.mu.RUnlock()
 
 	return map[string]interface{}{
-		"running":    m.IsRunning(),
-		"workers":    m.workers,
-		"queue":      m.queue.GetStats(),
-		"agents":     agents,
+		"running": m.IsRunning(),
+		"workers": m.workers,
+		"queue":   m.queue.GetStats(),
+		"agents":  agents,
 	}
 }
 
