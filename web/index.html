@@ -471,12 +471,46 @@ button:active {
                 </div>
 
                 <div class="form-group">
-                    <label for="scanType">Scan Type (Legacy)</label>
-                    <select id="scanType">
-                        <option value="regular">Regular Scan (dig, subfinder, nmap, httpx, whatweb, sslscan, nuclei, gobuster, nikto)</option>
-                        <option value="quick">Quick Scan (nmap + nuclei)</option>
-                        <option value="full">Full Scan (all tools)</option>
+                    <label for="scanType">Scan Type</label>
+                    <select id="scanType" onchange="updateToolSelector()">
+                        <option value="regular">Regular Scan (all 9 tools)</option>
+                        <option value="quick">Quick Scan (select tools)</option>
+                        <option value="full">Full Scan (AI-driven)</option>
                     </select>
+                </div>
+
+                <!-- Tool Selector for Quick Scan -->
+                <div id="toolSelector" style="display:none;" class="form-group">
+                    <label>Select Tools for Quick Scan</label>
+                    <div style="border: 1px solid #444; padding: 15px; border-radius: 4px; max-height: 200px; overflow-y: auto;">
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-dig" value="dig"> <label style="display:inline; margin-left: 5px;">dig (DNS lookup)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-subfinder" value="subfinder"> <label style="display:inline; margin-left: 5px;">subfinder (Subdomain discovery)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-nmap" value="nmap" checked> <label style="display:inline; margin-left: 5px;">nmap (Port scanning)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-httpx" value="httpx"> <label style="display:inline; margin-left: 5px;">httpx (HTTP probing)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-whatweb" value="whatweb"> <label style="display:inline; margin-left: 5px;">whatweb (Web fingerprinting)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-sslscan" value="sslscan"> <label style="display:inline; margin-left: 5px;">sslscan (SSL/TLS audit)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-nuclei" value="nuclei" checked> <label style="display:inline; margin-left: 5px;">nuclei (Vulnerability scan)</label>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <input type="checkbox" id="tool-gobuster" value="gobuster"> <label style="display:inline; margin-left: 5px;">gobuster (Directory brute-force)</label>
+                        </div>
+                        <div style="margin-bottom: 0px;">
+                            <input type="checkbox" id="tool-nikto" value="nikto"> <label style="display:inline; margin-left: 5px;">nikto (Web server scan)</label>
+                        </div>
+                    </div>
                 </div>
 
                 <button onclick="startScan()">Start Scan</button>
@@ -669,6 +703,16 @@ function initAuth() {
         addLog(`Auth error: ${err.message}`, 'error');
     });
 }
+    
+function updateToolSelector() {
+    const scanType = document.getElementById('scanType').value;
+    const toolSelector = document.getElementById('toolSelector');
+    if (scanType === 'quick') {
+        toolSelector.style.display = 'block';
+    } else {
+        toolSelector.style.display = 'none';
+    }
+}
 
 function startScan() {
     if (!authToken) {
@@ -689,18 +733,36 @@ function startScan() {
 
     addLog(`Starting ${scanType} scan for ${target}...`, 'info');
     
-    // Map scan type to playbook name
-    const typeToPlaybook = {
-        'regular': 'regular-scan',
-        'quick': 'quick-scan',
-        'full': 'full-scan-ai'
-    };
+    // Get selected tools for quick scan
+    let playbook = 'regular-scan';
+    let selectedTools = [];
     
-    const playbook = typeToPlaybook[scanType] || 'regular-scan';
+    if (scanType === 'quick') {
+        // Collect selected tools
+        const toolIds = ['dig', 'subfinder', 'nmap', 'httpx', 'whatweb', 'sslscan', 'nuclei', 'gobuster', 'nikto'];
+        for (let toolId of toolIds) {
+            const checkbox = document.getElementById('tool-' + toolId);
+            if (checkbox && checkbox.checked) {
+                selectedTools.push(toolId);
+            }
+        }
+        
+        if (selectedTools.length === 0) {
+            alert('Please select at least one tool for Quick Scan');
+            return;
+        }
+        
+        // Create custom playbook name based on selected tools
+        playbook = 'quick-scan-' + selectedTools.join('-');
+        addLog(`Selected tools: ${selectedTools.join(', ')}`, 'info');
+    } else if (scanType === 'full') {
+        playbook = 'full-scan-ai';
+    }
     
     const payload = {
         target: target,
-        playbook: playbook
+        playbook: playbook,
+        selectedTools: selectedTools  // Send selected tools to backend
     };
 
     fetch(`${API_BASE}/api/scan/playbook`, {

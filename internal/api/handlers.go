@@ -164,8 +164,9 @@ func (h *Handler) HandleStats(w http.ResponseWriter, r *http.Request) {
 
 // PlaybookRequest represents a playbook scan request
 type PlaybookRequest struct {
-	Playbook string `json:"playbook"`
-	Target   string `json:"target"`
+	Playbook      string   `json:"playbook"`
+	Target        string   `json:"target"`
+	SelectedTools []string `json:"selectedTools"` // Tools selected for quick scan
 }
 
 // HandlePlaybookScan starts a scan using a playbook
