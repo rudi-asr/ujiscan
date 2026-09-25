@@ -18,6 +18,7 @@ import (
 	"github.com/rudi-asr/ujiscan/internal/db"
 	"github.com/rudi-asr/ujiscan/internal/engagement"
 	"github.com/rudi-asr/ujiscan/internal/executor"
+	"github.com/rudi-asr/ujiscan/internal/metrics"
 	"github.com/rudi-asr/ujiscan/internal/persistence"
 	"github.com/rudi-asr/ujiscan/internal/playbook"
 	"github.com/rudi-asr/ujiscan/internal/registry"
@@ -124,6 +125,14 @@ func Run() error {
 	dashboardService := dashboard.NewMemoryDashboardService()
 	notificationService := dashboard.NewMemoryNotificationService()
 	dashboardHandler := dashboard.NewHandler(dashboardService, notificationService)
+
+	// Initialize metrics collector
+	metricsCollector := metrics.New(25) // max connections from pool config
+	metricsHandler := metrics.NewHandler(metricsCollector)
+	metricsHandler.SetDatabaseStatsCallback(func() (int, int, error) {
+		stats := dbPool.Stats()
+		return stats.OpenConnections, stats.Idle, nil
+	})
 
 	// Create API handler
 	apiHandler := api.NewHandler(scanStore, toolExecutor, scanExecutor, playbookEngine)
@@ -256,6 +265,15 @@ func Run() error {
 		auth.RequireRoles(auth.RoleAdmin, auth.RoleAuditor, auth.RoleClient)(http.HandlerFunc(dashboardHandler.HandleClientDashboard)))
 	mux.Handle("/api/dashboard/admin",
 		auth.RequireRoles(auth.RoleAdmin)(http.HandlerFunc(dashboardHandler.HandleAdminDashboard)))
+
+	// Metrics endpoints (admin + auditor only for detailed stats)
+	metricsRoles := auth.RequireRoles(auth.RoleAdmin, auth.RoleAuditor)
+	mux.Handle("/api/metrics", metricsRoles(http.HandlerFunc(metricsHandler.HandleMetrics)))
+	mux.Handle("/api/metrics/health", metricsRoles(http.HandlerFunc(metricsHandler.HandleHealth)))
+	mux.Handle("/api/metrics/database", metricsRoles(http.HandlerFunc(metricsHandler.HandleDatabaseStats)))
+	mux.Handle("/api/metrics/cache", metricsRoles(http.HandlerFunc(metricsHandler.HandleCacheStats)))
+	mux.Handle("/api/metrics/requests", metricsRoles(http.HandlerFunc(metricsHandler.HandleRequestStats)))
+	mux.Handle("/api/metrics/export", metricsRoles(http.HandlerFunc(metricsHandler.HandleExport)))
 
 	// Phase 7 Notification routes
 	mux.HandleFunc("/api/notifications", requireAuth(dashboardHandler.HandleGetNotifications))
