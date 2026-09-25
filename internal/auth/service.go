@@ -4,6 +4,7 @@ package auth
 import (
 	"crypto/rand"
 	"fmt"
+	"sync"
 	"time"
 )
 
@@ -11,6 +12,7 @@ import (
 // (Note: For production, use a real JWT library like github.com/golang-jwt/jwt)
 type SimpleTokenManager struct {
 	secretKey string
+	mu        sync.RWMutex
 	tokens    map[string]*Claims // In-memory token storage
 }
 
@@ -56,13 +58,18 @@ func (tm *SimpleTokenManager) GenerateToken(user *User, duration time.Duration) 
 	tokenID := fmt.Sprintf("token_%d_%s", now.UnixNano(), user.ID)
 
 	// Store claims
+	tm.mu.Lock()
 	tm.tokens[tokenID] = claims
+	tm.mu.Unlock()
 
 	return tokenID, nil
 }
 
 // ValidateToken validates a JWT token
 func (tm *SimpleTokenManager) ValidateToken(token string) (*Claims, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+
 	claims, exists := tm.tokens[token]
 	if !exists {
 		return nil, fmt.Errorf("invalid token")
@@ -97,26 +104,30 @@ func (tm *SimpleTokenManager) RefreshToken(token string) (string, error) {
 		IssuedAt:  time.Now(),
 	}
 
+	tm.mu.Lock()
 	tm.tokens[newTokenID] = newClaims
 
 	// Invalidate old token
 	delete(tm.tokens, token)
+	tm.mu.Unlock()
 
 	return newTokenID, nil
 }
 
 // InvalidateToken invalidates a token
 func (tm *SimpleTokenManager) InvalidateToken(token string) error {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 	delete(tm.tokens, token)
 	return nil
 }
 
 // AuthService provides authentication operations
 type AuthService struct {
-	userStore       UserStore
-	sessionStore    SessionStore
-	tokenManager    TokenManager
-	tokenDuration   time.Duration
+	userStore     UserStore
+	sessionStore  SessionStore
+	tokenManager  TokenManager
+	tokenDuration time.Duration
 }
 
 // NewAuthService creates a new auth service
