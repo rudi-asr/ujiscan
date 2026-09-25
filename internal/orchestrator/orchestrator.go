@@ -1,238 +1,193 @@
-// Package orchestrator coordinates execution flow with rules and scope
 package orchestrator
 
 import (
+	"context"
 	"fmt"
-	"log"
+	"time"
 
-	"github.com/rudi-asr/ujiscan/internal/registry"
-	"github.com/rudi-asr/ujiscan/internal/rules"
-	"github.com/rudi-asr/ujiscan/internal/scope"
-	"github.com/rudi-asr/ujiscan/internal/tools"
+	"github.com/google/uuid"
+	"github.com/rudi-asr/ujiscan/internal/planner"
 )
 
-// Orchestrator coordinates tool execution with rules and scope validation
+// Orchestrator manages the execution of engagement plans
 type Orchestrator struct {
-	registry       *registry.Registry
-	executor       *tools.RegistryExecutor
-	rulesEngine    *rules.RulesEngine
-	scopeValidator *scope.ScopeValidator
-	findings       []*rules.Finding // accumulated findings
-	executionLog   []ExecutionStep
-	strict         bool
-}
-
-// ExecutionStep records what was executed
-type ExecutionStep struct {
-	Phase       string
-	ToolID      string
-	Target      string
-	Status      string // pending, running, completed, failed
-	Reason      string // why this tool ran
-	TriggerRule string // which rule triggered this
-	Output      interface{}
+	scheduler *Scheduler
+	collector *ResultCollector
+	execution *EngagementExecution
+	config    SchedulerConfig
 }
 
 // NewOrchestrator creates a new orchestrator
-func NewOrchestrator(
-	reg *registry.Registry,
-	exec *tools.RegistryExecutor,
-	strict bool,
-) *Orchestrator {
-	orch := &Orchestrator{
-		registry:       reg,
-		executor:       exec,
-		rulesEngine:    rules.NewRulesEngine(reg),
-		scopeValidator: scope.NewScopeValidator(strict),
-		findings:       make([]*rules.Finding, 0),
-		executionLog:   make([]ExecutionStep, 0),
-		strict:         strict,
+func NewOrchestrator(config SchedulerConfig) *Orchestrator {
+	return &Orchestrator{
+		scheduler: NewScheduler(config),
+		collector: NewResultCollector(),
+		config:    config,
+	}
+}
+
+// InitializeExecution prepares for plan execution
+func (o *Orchestrator) InitializeExecution(plan *planner.ExecutionPlan) *EngagementExecution {
+	o.execution = &EngagementExecution{
+		ID:        uuid.New().String(),
+		Target:    plan.Target,
+		Status:    StatusPending,
+		PlanID:    plan.ID,
+		Phases:    make([]*PhaseExecution, 0),
+		StartTime: time.Now(),
+		Progress:  0,
 	}
 
-	// Load default rules
-	orch.rulesEngine.LoadDefaultRules()
-
-	return orch
-}
-
-// AddScopePattern adds a domain or CIDR to allowed scope
-func (o *Orchestrator) AddScopePattern(pattern string) error {
-	return o.scopeValidator.AddPattern(pattern)
-}
-
-// AddDenyPattern adds a pattern to deny list
-func (o *Orchestrator) AddDenyPattern(pattern string) error {
-	return o.scopeValidator.DenyPattern(pattern)
-}
-
-// AddRule adds a custom rule
-func (o *Orchestrator) AddRule(rule *rules.Rule) {
-	o.rulesEngine.AddRule(rule)
-}
-
-// ValidateTarget checks if target is in scope
-func (o *Orchestrator) ValidateTarget(target string) *scope.ValidationResult {
-	return o.scopeValidator.ValidateTarget(target)
-}
-
-// ValidateAndExecuteMode validates target then executes mode
-func (o *Orchestrator) ValidateAndExecuteMode(
-	target string,
-	modeID string,
-) error {
-	// Validate scope first
-	validation := o.ValidateTarget(target)
-	if !validation.Valid {
-		return fmt.Errorf("scope validation failed: %s", validation.Reason)
+	// Create phase executions
+	phaseMap := map[planner.ExecutionPhase]bool{
+		planner.PhaseRecon:     true,
+		planner.PhaseScanning:  true,
+		planner.PhaseAnalysis:  true,
+		planner.PhaseReporting: true,
 	}
 
-	log.Printf("✅ Target %s is in scope", target)
-
-	// Execute mode
-	mode := o.registry.GetMode(modeID)
-	if mode == nil {
-		return fmt.Errorf("mode %s not found", modeID)
+	for phaseKey := range phaseMap {
+		if steps, exists := plan.Phases[phaseKey]; exists {
+			phaseExec := o.scheduler.SchedulePhase(string(phaseKey), steps)
+			o.execution.Phases = append(o.execution.Phases, phaseExec)
+		}
 	}
 
-	// Execute phase by phase
-	for _, phaseExec := range mode.ExecutionOrder {
-		o.executePhaseWithRules(phaseExec.Phase, modeID, target, phaseExec.Parallel)
+	return o.execution
+}
+
+// ExecutePlan executes the entire plan
+func (o *Orchestrator) ExecutePlan(ctx context.Context, plan *planner.ExecutionPlan) (*EngagementExecution, error) {
+	if o.execution == nil {
+		o.InitializeExecution(plan)
+	}
+
+	o.execution.Status = StatusRunning
+
+	// Execute phases sequentially
+	for _, phase := range o.execution.Phases {
+		select {
+		case <-ctx.Done():
+			o.execution.Status = StatusCanceled
+			return o.execution, ctx.Err()
+		default:
+		}
+
+		// Execute all steps in phase
+		if err := o.executePhase(ctx, phase); err != nil {
+			o.execution.Status = StatusFailed
+			return o.execution, err
+		}
+
+		// Update progress
+		o.execution.Progress = o.scheduler.CalculateProgress(o.execution.Phases)
+	}
+
+	// All phases completed
+	o.execution.Status = StatusCompleted
+	now := time.Now()
+	o.execution.EndTime = &now
+
+	// Aggregate findings
+	o.execution.Findings = o.collector.RankFindings()
+
+	return o.execution, nil
+}
+
+// executePhase executes all steps in a phase
+func (o *Orchestrator) executePhase(ctx context.Context, phase *PhaseExecution) error {
+	phase.Status = StatusRunning
+
+	for _, step := range phase.Steps {
+		select {
+		case <-ctx.Done():
+			phase.Status = StatusCanceled
+			return ctx.Err()
+		default:
+		}
+
+		// Execute step with retry logic
+		if err := o.executeStepWithRetry(ctx, step); err != nil {
+			step.Status = StatusFailed
+			step.Error = err.Error()
+			// Continue with other steps (don't fail entire phase)
+		}
+
+		o.execution.CurrentStep = step.Name
+		o.execution.Progress = o.scheduler.CalculateProgress(o.execution.Phases)
+	}
+
+	// Mark phase complete if all steps done
+	if o.scheduler.CheckPhaseCompletion(phase) {
+		phase.Status = StatusCompleted
 	}
 
 	return nil
 }
 
-// executePhaseWithRules executes a phase and evaluates rules on findings
-func (o *Orchestrator) executePhaseWithRules(
-	phaseID string,
-	modeID string,
-	target string,
-	parallel bool,
-) error {
-	log.Printf("Executing phase: %s", phaseID)
+// executeStepWithRetry executes a step with retry logic
+func (o *Orchestrator) executeStepWithRetry(ctx context.Context, step *StepExecution) error {
+	for attempt := 0; attempt <= o.config.MaxRetries; attempt++ {
+		err := o.scheduler.ExecuteStep(ctx, step)
+		if err == nil && step.Status == StatusCompleted {
+			return nil // Success
+		}
 
-	// Get tools for phase
-	tools := o.registry.GetToolsByPhase(phaseID)
-	if len(tools) == 0 {
-		return fmt.Errorf("no tools found for phase %s", phaseID)
-	}
-
-	// Execute tools
-	for _, tool := range tools {
-		// Check if tool is applicable to this mode
-		applicable := false
-		for _, mode := range tool.ModeApplicability {
-			if mode == modeID {
-				applicable = true
-				break
+		if err != nil && step.RetryCount < o.config.MaxRetries {
+			// Retry
+			if err := o.scheduler.RetryStep(ctx, step); err != nil {
+				return err
 			}
-		}
-		if !applicable {
-			log.Printf("  Tool %s not applicable to mode %s, skipping", tool.Name, modeID)
-			continue
-		}
-
-		// Execute tool
-		o.logExecution(phaseID, tool.ID, target, "pending", "Mode execution", "")
-
-		output, err := o.executor.RunTool(tool.ID, []string{target}, target, "")
-		if err != nil {
-			o.logExecution(phaseID, tool.ID, target, "failed", err.Error(), "")
-			continue
-		}
-
-		o.logExecution(phaseID, tool.ID, target, "completed", "Tool executed", "")
-
-		// Parse findings from output (simplified - just create generic finding)
-		finding := &rules.Finding{
-			ID:        output.ID,
-			Type:      fmt.Sprintf("tool_output_%s", tool.ID),
-			Source:    tool.Name,
-			Value:     fmt.Sprintf("%d bytes", len(output.Stdout)),
-			Data:      output,
-			Timestamp: output.StartedAt.Unix(),
-		}
-		o.findings = append(o.findings, finding)
-
-		// Evaluate rules against new finding
-		evaluation := o.rulesEngine.EvaluateFinding(finding)
-		if len(evaluation.MatchedRules) > 0 {
-			log.Printf("⚡ %d rules matched for finding from %s", 
-				len(evaluation.MatchedRules), tool.Name)
-
-			// Execute recommended tools
-			for _, nextToolID := range evaluation.NextTools {
-				nextTool := o.registry.GetTool(nextToolID)
-				if nextTool == nil {
-					continue
-				}
-
-				log.Printf("  → Running %s (recommended by rules)", nextTool.Name)
-				o.logExecution(phaseID, nextToolID, target, "pending", 
-					"Rule-triggered execution", evaluation.MatchedRules[0].ID)
-
-				_, err := o.executor.RunTool(nextToolID, []string{target}, target, "")
-				if err != nil {
-					o.logExecution(phaseID, nextToolID, target, "failed", 
-						err.Error(), evaluation.MatchedRules[0].ID)
-					continue
-				}
-
-				o.logExecution(phaseID, nextToolID, target, "completed", 
-					"Rule-triggered tool executed", evaluation.MatchedRules[0].ID)
-			}
+		} else if step.Status == StatusFailed {
+			return fmt.Errorf("step %s failed after %d retries", step.Name, step.RetryCount)
 		}
 	}
 
-	return nil
+	return fmt.Errorf("step %s exceeded max retries", step.Name)
 }
 
-// logExecution records an execution step
-func (o *Orchestrator) logExecution(
-	phase string,
-	toolID string,
-	target string,
-	status string,
-	reason string,
-	triggerRule string,
-) {
-	step := ExecutionStep{
-		Phase:       phase,
-		ToolID:      toolID,
-		Target:      target,
-		Status:      status,
-		Reason:      reason,
-		TriggerRule: triggerRule,
+// GetExecutionStatus returns current execution status
+func (o *Orchestrator) GetExecutionStatus() *EngagementExecution {
+	return o.execution
+}
+
+// GetFindings returns collected findings
+func (o *Orchestrator) GetFindings() []Finding {
+	return o.collector.RankFindings()
+}
+
+// AddFinding adds a finding (from agent)
+func (o *Orchestrator) AddFinding(finding Finding) {
+	o.collector.AddFinding(finding)
+}
+
+// DeduplicateFindings removes duplicates
+func (o *Orchestrator) DeduplicateFindings() []Finding {
+	return o.collector.DeduplicateFindings()
+}
+
+// CancelExecution cancels ongoing execution
+func (o *Orchestrator) CancelExecution() {
+	if o.execution != nil {
+		o.execution.Status = StatusCanceled
+		now := time.Now()
+		o.execution.EndTime = &now
 	}
-	o.executionLog = append(o.executionLog, step)
 }
 
-// GetFindings returns accumulated findings
-func (o *Orchestrator) GetFindings() []*rules.Finding {
-	return o.findings
-}
+// GetSummary returns execution summary
+func (o *Orchestrator) GetSummary() map[string]interface{} {
+	if o.execution == nil {
+		return nil
+	}
 
-// GetExecutionLog returns execution history
-func (o *Orchestrator) GetExecutionLog() []ExecutionStep {
-	return o.executionLog
-}
-
-// ScopeConfig returns current scope configuration
-func (o *Orchestrator) ScopeConfig() string {
-	return o.scopeValidator.Summary()
-}
-
-// Summary returns execution summary
-func (o *Orchestrator) Summary() string {
-	return fmt.Sprintf(
-		"Orchestration Summary:\n"+
-			"  Findings: %d\n"+
-			"  Execution steps: %d\n"+
-			"  Rules triggered: %d\n"+
-			"  Scope validation: strict=%v",
-		len(o.findings),
-		len(o.executionLog),
-		len(o.executionLog), // TODO: track actual rule triggers
-		o.strict,
-	)
+	return map[string]interface{}{
+		"id":        o.execution.ID,
+		"target":    o.execution.Target,
+		"status":    o.execution.Status,
+		"progress":  o.execution.Progress,
+		"start_time": o.execution.StartTime,
+		"end_time":   o.execution.EndTime,
+		"findings":   o.collector.GetFindingsSummary(),
+	}
 }
