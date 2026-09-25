@@ -98,6 +98,9 @@ func (e *Engine) executePhase(pb *Playbook, ctx *ExecutionContext, phase PhaseTy
 	steps := pb.GetPhaseSteps(phase)
 	
 	fmt.Printf("[%s] Executing phase %s with %d steps\n", ctx.PlaybookName, phase, len(steps))
+	for i, step := range steps {
+		fmt.Printf("[%s]  Step %d: %s (tool=%s)\n", ctx.PlaybookName, i, step.ID, step.Tool)
+	}
 
 	for _, step := range steps {
 		// Check condition - empty condition means "always execute"

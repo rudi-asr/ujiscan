@@ -1,6 +1,7 @@
 package playbook
 
 import (
+	"fmt"
 	"github.com/rudi-asr/ujiscan/internal/models"
 )
 
@@ -66,9 +67,11 @@ func NewPlaybook(name string) *Playbook {
 func (p *Playbook) AddStep(phase PhaseType, step Step) {
 	if _, ok := p.Phases[phase]; !ok {
 		p.Phases[phase] = make([]Step, 0)
+		fmt.Printf("[playbook] Creating new phase: %s\n", phase)
 	}
 	p.Phases[phase] = append(p.Phases[phase], step)
 	p.StepMap[step.ID] = &step
+	fmt.Printf("[playbook] Added step %s to phase %s (now %d steps in phase)\n", step.ID, phase, len(p.Phases[phase]))
 }
 
 // GetStep retrieves a step by ID
@@ -79,8 +82,10 @@ func (p *Playbook) GetStep(stepID string) *Step {
 // GetPhaseSteps returns all steps for a phase
 func (p *Playbook) GetPhaseSteps(phase PhaseType) []Step {
 	if steps, ok := p.Phases[phase]; ok {
+		fmt.Printf("[playbook] GetPhaseSteps(%s) returning %d steps\n", phase, len(steps))
 		return steps
 	}
+	fmt.Printf("[playbook] GetPhaseSteps(%s) NOT FOUND, returning empty\n", phase)
 	return []Step{}
 }
 

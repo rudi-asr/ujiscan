@@ -105,9 +105,11 @@ func parsePlaybook(content string) (*Playbook, error) {
 
 // parsePlaybookPhases extracts phases and steps from markdown
 func parsePlaybookPhases(content string, pb *Playbook) error {
+	fmt.Printf("[parser] Starting to parse playbook phases\\n")
 	lines := strings.Split(content, "\n")
 	var currentPhase PhaseType
 	var currentStep *Step
+	var stepCount int
 
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
@@ -119,12 +121,23 @@ func parsePlaybookPhases(content string, pb *Playbook) error {
 
 		// Detect phase header (## recon, ## enum, etc)
 		if strings.HasPrefix(line, "## ") {
+			// Save previous step if exists BEFORE changing phase!
+			if currentStep != nil {
+				fmt.Printf("[parser] Saving step: %s (tool=%s, phase at save=%s) [triggered by phase change]\n", currentStep.ID, currentStep.Tool, currentPhase)
+				stepCount++
+				pb.AddStep(currentPhase, *currentStep)
+				currentStep = nil
+			}
+		
 			phaseName := strings.TrimPrefix(line, "## ")
-			currentPhase = PhaseType(strings.ToLower(strings.TrimSpace(phaseName)))
+			newPhase := PhaseType(strings.ToLower(strings.TrimSpace(phaseName)))
+			fmt.Printf("[parser] Found phase header: %s → %s\n", phaseName, newPhase)
+			currentPhase = newPhase
 			if currentPhase != PhaseRecon && currentPhase != PhaseEnum && 
 				currentPhase != PhaseExploit && currentPhase != PhaseVerify && 
 				currentPhase != PhaseReport {
 				// Unknown phase, skip
+				fmt.Printf("[parser] Phase %s unknown, skipping\n", currentPhase)
 				continue
 			}
 			continue
@@ -134,11 +147,14 @@ func parsePlaybookPhases(content string, pb *Playbook) error {
 		if strings.HasPrefix(line, "### ") {
 			// Save previous step if exists
 			if currentStep != nil {
+				fmt.Printf("[parser] Saving step: %s (tool=%s, phase at save=%s)\n", currentStep.ID, currentStep.Tool, currentPhase)
+				stepCount++
 				pb.AddStep(currentPhase, *currentStep)
 			}
 
 			stepID := strings.TrimPrefix(line, "### ")
 			stepID = strings.TrimSpace(stepID)
+			fmt.Printf("[parser] Found step header: %s (phase=%s)\n", stepID, currentPhase)
 			currentStep = &Step{
 				ID:        stepID,
 				NextSteps: make(map[string]string),
@@ -180,8 +196,11 @@ func parsePlaybookPhases(content string, pb *Playbook) error {
 
 	// Add last step
 	if currentStep != nil && currentStep.ID != "" && currentStep.Tool != "" {
+		fmt.Printf("[parser] Saving final step: %s (tool=%s)\n", currentStep.ID, currentStep.Tool)
+		stepCount++
 		pb.AddStep(currentPhase, *currentStep)
 	}
 
+	fmt.Printf("[parser] Playbook parsing complete - total steps parsed: %d\n", stepCount)
 	return nil
 }
