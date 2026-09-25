@@ -8,14 +8,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	_ "github.com/mattn/go-sqlite3"
+	// _ "github.com/mattn/go-sqlite3" // Disabled: requires CGO, using in-memory store instead
 
 	"github.com/rudi-asr/ujiscan/internal/api"
 	"github.com/rudi-asr/ujiscan/internal/audit"
 	"github.com/rudi-asr/ujiscan/internal/auth"
 	"github.com/rudi-asr/ujiscan/internal/compression"
 	"github.com/rudi-asr/ujiscan/internal/dashboard"
-	"github.com/rudi-asr/ujiscan/internal/db"
+	// "github.com/rudi-asr/ujiscan/internal/db" // Disabled for CGO-free mode
 	"github.com/rudi-asr/ujiscan/internal/engagement"
 	"github.com/rudi-asr/ujiscan/internal/metrics"
 	"github.com/rudi-asr/ujiscan/internal/persistence"
@@ -35,40 +35,18 @@ func Run() error {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
 
-	// Initialize SQLite database (DATABASE_PATH env overrides default — used by Docker)
+	// Initialize database (or skip for CGO-free mode using in-memory stores)
+	var pm *persistence.PersistenceManager
 	dbPath := os.Getenv("DATABASE_PATH")
 	if dbPath == "" {
 		dbPath = filepath.Join(projectRoot, "ujiscan.db")
 	}
-	sqliteDB, err := db.InitDB(dbPath)
-	if err != nil {
-		return fmt.Errorf("failed to initialize database: %w", err)
-	}
-	defer sqliteDB.Close()
-	log.Printf("✅ SQLite database initialized: %s", dbPath)
-
-	// Create connection pool with optimizations
-	poolConfig := db.PoolConfig{
-		MaxOpenConns:    25,
-		MaxIdleConns:    5,
-		ConnMaxLifetime: 300,
-	}
-	dbPool := db.NewPool(sqliteDB, poolConfig)
-
-	// Apply SQLite optimizations
-	if err := dbPool.Optimize(); err != nil {
-		log.Printf("Warning: Failed to optimize database: %v", err)
-	}
-
-	// Add performance indexes
-	if err := dbPool.AddIndexes(); err != nil {
-		log.Printf("Warning: Failed to add indexes: %v", err)
-	}
-
-	log.Printf("✅ Database pool configured (maxOpen=%d, maxIdle=%d)", poolConfig.MaxOpenConns, poolConfig.MaxIdleConns)
-
-	// Initialize persistence manager
-	pm := persistence.NewPersistenceManager(sqliteDB)
+	
+	log.Printf("⚠️  Running in in-memory mode (no SQLite). Data will not persist between restarts.")
+	log.Printf("✅ Using in-memory stores for scans, sessions, findings, etc.")
+	
+	// Initialize stores (already in-memory) without database
+	// Database would be used for persistence, but we'll skip it for now
 
 	// Load registry from tools.yaml (legacy - moved to orchestrator)
 	// toolsYAML := filepath.Join(projectRoot, "tools.yaml")
@@ -133,10 +111,11 @@ func Run() error {
 	// Initialize metrics collector
 	metricsCollector := metrics.New(25) // max connections from pool config
 	metricsHandler := metrics.NewHandler(metricsCollector)
-	metricsHandler.SetDatabaseStatsCallback(func() (int, int, error) {
-		stats := dbPool.Stats()
-		return stats.OpenConnections, stats.Idle, nil
-	})
+	// Skip database stats callback in in-memory mode
+	// metricsHandler.SetDatabaseStatsCallback(func() (int, int, error) {
+	// 	stats := dbPool.Stats()
+	// 	return stats.OpenConnections, stats.Idle, nil
+	// })
 
 	// Create API handler
 	apiHandler := api.NewHandler(scanStore, toolExecutor, playbookEngine)
