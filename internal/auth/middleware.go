@@ -22,8 +22,18 @@ const (
 func AuthMiddleware(tokenManager TokenManager) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Skip auth for login endpoint
-			if strings.HasSuffix(r.URL.Path, "/auth/login") {
+			p := r.URL.Path
+
+			// CORS preflight must always pass through to corsMiddleware
+			if r.Method == http.MethodOptions {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Public endpoints: login, health check, and static assets
+			if strings.HasSuffix(p, "/auth/login") ||
+				p == "/api/status" ||
+				(r.Method == http.MethodGet && !strings.HasPrefix(p, "/api/") && !strings.HasPrefix(p, "/auth/")) {
 				next.ServeHTTP(w, r)
 				return
 			}

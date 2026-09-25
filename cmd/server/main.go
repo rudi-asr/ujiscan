@@ -134,7 +134,11 @@ func Run() error {
 	adminOnly := auth.RequireRoles(auth.RoleAdmin)
 	mux.Handle("/api/users", adminOnly(http.HandlerFunc(requireAuth(authHandler.HandleListUsers))))
 	mux.Handle("/api/users/create", adminOnly(http.HandlerFunc(requireAuth(authHandler.HandleCreateUser))))
-	mux.HandleFunc("DELETE /api/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
 		if auth.GetRole(r) != auth.RoleAdmin {
 			http.Error(w, "forbidden", http.StatusForbidden)
 			return
