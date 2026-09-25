@@ -473,8 +473,8 @@ button:active {
                 <div class="form-group">
                     <label for="scanType">Scan Type (Legacy)</label>
                     <select id="scanType">
-                        <option value="regular">Regular Scan (nmap + nuclei)</option>
-                        <option value="quick">Quick Scan (nmap only)</option>
+                        <option value="regular">Regular Scan (dig, subfinder, nmap, httpx, whatweb, sslscan, nuclei, gobuster, nikto)</option>
+                        <option value="quick">Quick Scan (nmap + nuclei)</option>
                         <option value="full">Full Scan (all tools)</option>
                     </select>
                 </div>
@@ -683,19 +683,20 @@ function startScan() {
         alert('Please enter a target');
         return;
     }
-
-    addLog(`Starting ${currentMode} scan for ${target}...`, 'info');
     
-    // Map mode to playbook name
-    const modeToPlaybook = {
-        'reconnaissance': 'network-discovery',
-        'vulnerability': 'vulnerability-quick',
-        'web': 'web-full-scan',
-        'network': 'network-discovery',
-        'aggressive': 'web-full-scan'
+    // Get scan type dari dropdown
+    const scanType = document.getElementById('scanType').value;
+
+    addLog(`Starting ${scanType} scan for ${target}...`, 'info');
+    
+    // Map scan type to playbook name
+    const typeToPlaybook = {
+        'regular': 'regular-scan',
+        'quick': 'quick-scan',
+        'full': 'full-scan-ai'
     };
     
-    const playbook = modeToPlaybook[currentMode] || 'network-discovery';
+    const playbook = typeToPlaybook[scanType] || 'regular-scan';
     
     const payload = {
         target: target,

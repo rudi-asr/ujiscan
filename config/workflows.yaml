@@ -1,4 +1,151 @@
 workflows:
+  regular_scan:
+    name: "regular_scan"
+    description: "Regular comprehensive security scan with standard tools"
+    version: "1.0"
+    timeout: 7200
+    playbook: "regular-scan"
+    steps:
+      - id: "dns_recon"
+        name: "DNS Reconnaissance"
+        tool: "dig"
+        parameters:
+          target: "{{ Target }}"
+          args: ""
+        timeout: 60
+        
+      - id: "subdomain_enum"
+        name: "Subdomain Enumeration"
+        tool: "subfinder"
+        parameters:
+          target: "{{ Target }}"
+          args: "-json"
+        timeout: 300
+        
+      - id: "port_scan"
+        name: "Port Scanning"
+        tool: "nmap"
+        parameters:
+          target: "{{ Target }}"
+          args: "-p 22,80,443,3306,5432,6379,27017,8080,8443,8000,5000,3000 -sV -sC"
+        timeout: 600
+        
+      - id: "http_probe"
+        name: "HTTP Probing"
+        tool: "httpx"
+        parameters:
+          target: "{{ Target }}"
+          args: "-json"
+        timeout: 300
+        
+      - id: "web_fingerprint"
+        name: "Web Technology Fingerprinting"
+        tool: "whatweb"
+        parameters:
+          target: "{{ Target }}"
+          args: "--color=never --log-json=-"
+        timeout: 300
+        
+      - id: "ssl_audit"
+        name: "SSL/TLS Audit"
+        tool: "sslscan"
+        parameters:
+          target: "{{ Target }}"
+          args: "--no-failed"
+        timeout: 300
+        
+      - id: "vuln_scan"
+        name: "Vulnerability Scanning"
+        tool: "nuclei"
+        parameters:
+          target: "{{ Target }}"
+          args: "-json -severity high,critical"
+        timeout: 600
+        
+      - id: "dir_brute"
+        name: "Directory Brute-Force"
+        tool: "gobuster"
+        parameters:
+          target: "{{ Target }}"
+          args: "dir -u http://{{ Target }} -w /usr/share/wordlists/dirbuster/directory-list-2.3-small.txt -q"
+        timeout: 600
+        
+      - id: "web_server_scan"
+        name: "Web Server Vulnerability Scan"
+        tool: "nikto"
+        parameters:
+          target: "{{ Target }}"
+          args: "-Format JSON"
+        timeout: 300
+
+  quick_scan:
+    name: "quick_scan"
+    description: "Ultra-fast security scan with nmap only"
+    version: "1.0"
+    timeout: 600
+    playbook: "quick-scan"
+    steps:
+      - id: "nmap_quick"
+        name: "Quick Port Scan"
+        tool: "nmap"
+        parameters:
+          target: "{{ Target }}"
+          args: "-p 22,80,443,8080 -sV --open"
+        timeout: 300
+
+  full_scan_ai:
+    name: "full_scan_ai"
+    description: "AI Agent-driven comprehensive assessment"
+    version: "1.0"
+    timeout: 14400
+    playbook: "full-scan-ai"
+    mode: "agentic"
+    steps:
+      - id: "ai_recon"
+        name: "AI Reconnaissance Planning"
+        type: "ai-agent"
+        parameters:
+          target: "{{ Target }}"
+          agent: "ReconAgent"
+          autonomy: "full"
+        timeout: 600
+        
+      - id: "ai_enum"
+        name: "AI Service Enumeration"
+        type: "ai-agent"
+        parameters:
+          target: "{{ Target }}"
+          agent: "EnumAgent"
+          autonomy: "full"
+        timeout: 1200
+        
+      - id: "ai_vuln"
+        name: "AI Vulnerability Assessment"
+        type: "ai-agent"
+        parameters:
+          target: "{{ Target }}"
+          agent: "VulnAgent"
+          autonomy: "full"
+        timeout: 1800
+        
+      - id: "ai_exploit"
+        name: "AI Exploitation Planning"
+        type: "ai-agent"
+        parameters:
+          target: "{{ Target }}"
+          agent: "ExploitAgent"
+          autonomy: "supervised"
+        timeout: 900
+        
+      - id: "ai_report"
+        name: "AI Report Generation"
+        type: "ai-agent"
+        parameters:
+          target: "{{ Target }}"
+          agent: "ReportAgent"
+          autonomy: "full"
+        timeout: 600
+
   web_standard:
     name: "web_standard"
     description: "Standard web application penetration test workflow"

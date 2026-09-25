@@ -22,16 +22,38 @@ tools:
     min_version: "3.0"
     parser_strategy: "nuclei_json"
 
-  ffuf:
-    name: "ffuf"
-    description: "Web directory/parameter fuzzer"
+  sslscan:
+    name: "sslscan"
+    description: "SSL/TLS security audit tool"
     category: "scanning"
-    install_command: "go install github.com/ffuf/ffuf/v2@latest || apt-get install -y ffuf"
-    verify_command: "ffuf -version"
-    execute_template: "ffuf -u {{ target }} {{ args }}"
+    install_command: "brew install sslscan || apt-get install -y sslscan"
+    verify_command: "sslscan --version"
+    execute_template: "sslscan --no-failed {{ target }} {{ args }}"
     platforms: ["darwin", "linux"]
     min_version: "2.0"
-    parser_strategy: "ffuf_json"
+    parser_strategy: "sslscan_xml"
+
+  whatweb:
+    name: "whatweb"
+    description: "Web fingerprinting and technology identification"
+    category: "recon"
+    install_command: "brew install whatweb || apt-get install -y whatweb"
+    verify_command: "whatweb --version"
+    execute_template: "whatweb --color=never --log-json=- {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "1.0"
+    parser_strategy: "whatweb_json"
+
+  httpx:
+    name: "httpx"
+    description: "Fast and multi-purpose HTTP toolkit"
+    category: "recon"
+    install_command: "go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest || apt-get install -y httpx-toolkit"
+    verify_command: "httpx -version"
+    execute_template: "httpx -json {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "1.0"
+    parser_strategy: "httpx_json"
 
   subfinder:
     name: "subfinder"
@@ -44,13 +66,46 @@ tools:
     min_version: "2.6"
     parser_strategy: "subfinder_json"
 
+  dig:
+    name: "dig"
+    description: "DNS query and lookup tool"
+    category: "recon"
+    install_command: "brew install bind || apt-get install -y dnsutils"
+    verify_command: "dig -v"
+    execute_template: "dig +short {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "9.0"
+    parser_strategy: "raw"
+
+  gobuster:
+    name: "gobuster"
+    description: "Web directory and DNS subdomain brute-force"
+    category: "scanning"
+    install_command: "go install github.com/OJ/gobuster/v3@latest || apt-get install -y gobuster"
+    verify_command: "gobuster version"
+    execute_template: "gobuster dir -u {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "3.0"
+    parser_strategy: "gobuster_json"
+
+  nikto:
+    name: "nikto"
+    description: "Web server vulnerability scanner"
+    category: "scanning"
+    install_command: "brew install nikto || apt-get install -y nikto"
+    verify_command: "nikto -version"
+    execute_template: "nikto -h {{ target }} {{ args }}"
+    platforms: ["darwin", "linux"]
+    min_version: "2.0"
+    parser_strategy: "nikto_xml"
+
   curl:
     name: "curl"
     description: "HTTP client for testing APIs"
     category: "tools"
     install_command: "brew install curl || apt-get install -y curl"
     verify_command: "curl --version"
-    execute_template: "curl {{ target }} {{ args }}"
+    execute_template: "curl -I {{ target }} {{ args }}"
     platforms: ["darwin", "linux", "windows"]
     min_version: "7.0"
     parser_strategy: "raw"
