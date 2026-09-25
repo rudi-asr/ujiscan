@@ -349,10 +349,15 @@ func (e *Engine) ExecuteQuickScanWithTools(ctx context.Context, scanID string, t
 			Stdout:    execResult.Stdout,
 			Stderr:    execResult.Stderr,
 			ExitCode:  execResult.ExitCode,
-			Error:     err.Error(),
+			Error:     "",
 			Duration:  execResult.Duration * 1000,
 			StartedAt: time.Now(),
 			EndedAt:   time.Now(),
+		}
+		
+		// Set error only if err exists
+		if err != nil {
+			output.Error = err.Error()
 		}
 
 		// Store result
