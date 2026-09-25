@@ -2,6 +2,40 @@
 
 All notable changes to this project are documented below.
 
+## [1.1.0] - 2026-09-25 (AI ORCHESTRATION)
+
+### 🤖 Phase B — Agent Framework (`b3eedbc`)
+
+- `internal/agent/`: task queue (priority + retries + cancelled-task purge), worker manager
+- Concrete agents: **ReconnaissanceAgent** (nmap text parsing → hosts/ports/OS), **ScannerAgent** (nuclei text parsing → vulnerabilities), **AnalyzerAgent** (local severity/CVSS classification + optional Claude enrichment)
+- Agent API handler (`internal/agent/handlers.go`) for `/api/agents/*` (submit/status/tasks/wait/cancel) — library ready
+- Queue guards: duplicate-ID rejection; `Dequeue` skips terminated (cancelled) tasks
+
+### ⚙️ Phase C — AI Orchestration (C.1 → C.5)
+
+- **C.1 (`b983269`)** AI orchestration framework: AI client + agent executor + agentic playbook
+- **C.2 (`7888df4`)** Real AI integration with **mock responses — works without API key** (set `OPENAI_API_KEY` for live mode)
+- **C.3 (`596e62f`)** Dynamic tool selection via service detection: nmap parsing + port→tool mapping (`internal/ai/service_detection.go`)
+- **C.4 (`5b5c58b`)** Adaptive execution loop (`internal/playbook/adaptive.go`):
+  - Parallel tool execution (max 4 concurrent, 120s per-tool timeout)
+  - `PhaseResults` aggregation + `ShouldContinueToPhase` heuristics (confidence <0.4 / StopScan / no findings after non-recon phase / all tools failed)
+  - Learning feedback: `ai.Client.UpdateToolFeedback` + `GetPreferredTools` (prefers historically successful tools)
+  - 🐛 Fix: agentic scans now target the **real target** (was hardcoded `scanme.nmap.org`)
+- **C.5 (`07ff635`)** AI report generation & prioritization (`internal/playbook/report.go`):
+  - CVSS-like `SeverityScore` (critical 9.8 → info 0), `PrioritizeFindings` (risk-ranked), `BuildReportMetrics` (overall risk 0–10)
+  - `GenerateFinalReport` → `ReportData` with AI executive summary (`internal/ai/summary.go`; deterministic fallback without API key)
+  - Multi-format export: `ToJSON()` / `ToMarkdown()` / `ToHTML()` (dark theme, self-contained)
+
+### 🔧 Fixes & Infra (same session)
+
+- CORS middleware now **outermost** — every response incl. 401/403 carries `Access-Control-*` (fixes browser "Failed to fetch")
+- Docker: honors `DATABASE_PATH` + `CORS_ALLOWED_ORIGINS` env; `tools.yaml` + `playbooks/` copied into image; DB persists via `/app/data` volume
+- Notifications endpoint fixed (typed context key)
+- gh-pages: auth-aware UI deployed (login + 3 dashboards); relative redirect paths (works under `/ujiscan/` subpath); root index redirects to login
+- `go.mod` `go 1.23` (was 1.26) — by design for Docker `golang:1.23` base
+
+---
+
 ## [1.0.0] - 2026-09-25 (RELEASE)
 
 ### 🎉 Initial Release

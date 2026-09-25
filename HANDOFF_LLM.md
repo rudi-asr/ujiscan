@@ -1,9 +1,19 @@
 # HANDOFF_LLM.md — ujiscan Context for Next LLM
 
-**For:** Next LLM session / model switch  
-**Status:** ujiscan fully operational (Phases 1-5 ✅)  
+**For:** Next LLM session / model switch / device switch  
+**Status:** v1.1.0 — Phases 1–11 ✅ + Phase B (agent framework) ✅ + Phase C.1–C.5 (AI orchestration) ✅  
 **Date:** 2026-09-25  
 **User:** Rudi (asruddin) — Offensive Security / Penetration Tester  
+
+---
+
+## ⚠️ READ FIRST: Parallel Agent + Drive Worktree (2026-09-25)
+
+1. **Canonical source of truth = GitHub origin.** On a fresh device: `git pull origin main` first — the local worktree lives on Google Drive and can be out of sync.
+2. **A parallel agent (Claude Haiku, CLI session `20260924_231033_f04bfa`) actively works on this repo.** Before ANY edit/commit: `git log --oneline -3` + `git status`. New commits → pull + adapt; never re-implement what's already in HEAD.
+3. **Commit small & fast.** Uncommitted work in this Drive worktree can be silently reverted (repeatedly happened). Commit specific paths — NEVER `git add -A` (may sweep the other agent's in-flight edits).
+4. **Google Drive sync quirk:** files may briefly wedge with `resource deadlock avoided` (EDEADLK) while syncing — wait/retry; keep a backup of anything precious.
+5. **Go formatting:** `gofmt -w` on shared packages (e.g. `internal/playbook/`) normalizes whitespace in files other agents wrote — harmless but mention it in the commit message.
 
 ---
 
@@ -11,13 +21,36 @@
 
 **Agentic Penetration Testing Platform**
 - Go backend (pure net/http) + HTML/CSS/JS frontend
-- Security tools: nmap, nuclei, curl, dig, whois
+- Security tools (config/tools.yaml): nmap, nuclei, dig, subfinder, httpx, whatweb, sslscan, gobuster, nikto
 - Playbook engine: YAML-driven multi-phase scanning
-- AI loop: Claude API makes dynamic scan decisions per-step
-- Status: ✅ PRODUCTION-READY, all endpoints working
+- **Phase C AI loop**: adaptive execution + service detection + AI reports
+- Status: ✅ v1.1.0, all endpoints working
 
-**Server:** localhost:8081  
-**GitHub:** https://github.com/rudi-asr/ujiscan  
+**Server:** localhost:8081 (login `admin@ujiscan.local` / `admin123`)  
+**Dashboard:** local `/html/login.html` · public https://rudi-asr.github.io/ujiscan/ (backend must run locally)  
+**GitHub:** https://github.com/rudi-asr/ujiscan (main + gh-pages)
+
+---
+
+## Architecture — Phase B & C (as of C.5, 2026-09-25)
+
+| Concern | Files | Notes |
+|---|---|---|
+| Agent framework (B) | `internal/agent/{queue,manager,types,base}.go` | TaskQueue (priority/retry/cancel-purge), worker Manager |
+| Recon agent (B) | `internal/agent/recon_agent.go` | nmap via generic `tools.Executor.Execute`; parses TEXT output |
+| Scanner agent (B) | `internal/agent/scanner_agent.go` | nuclei via generic executor; parses TEXT output |
+| Analyzer agent (B) | `internal/agent/analyzer_agent.go` | local classification + optional `Chat(ctx, msgs)` enrichment |
+| Agent API (B) | `internal/agent/handlers.go` | `/api/agents/*` handlers — **not yet wired into main.go** |
+| AI client (C.1/C.2/C.4.4) | `internal/ai/client.go` | `NewClient()` reads `OPENAI_API_KEY`; no key → deterministic mock mode (works offline). `SelectToolsForTarget`, `AnalyzeToolOutput`, `UpdateToolFeedback`, `GetPreferredTools` |
+| AI summary (C.5) | `internal/ai/summary.go` | `GenerateExecutiveSummary` (+ `BuildFallbackSummary` fallback) |
+| Service detection (C.3) | `internal/ai/service_detection.go` | `DetectServicesFromNmap`, `GetToolsForServices`, `SummarizeServices` |
+| Adaptive loop (C.4) | `internal/playbook/adaptive.go` | `ExecuteToolsPhaseParallel` (max 4, 120s/tool), `AggregatePhaseResults`, `ShouldContinueToPhase` |
+| Agentic scan (C.4) | `internal/playbook/agentic.go` | `ExecuteAgenticScan`: recon→enum→exploit adaptive loop, real target (NOT hardcoded), final report |
+| Report (C.5) | `internal/playbook/report.go` | `PrioritizeFindings`, `SeverityScore`, `BuildReportMetrics`, `ReportData.ToJSON/ToMarkdown/ToHTML` |
+
+**API auth model:** ALL `/api/*` require `Authorization: Bearer <token>` (login via `POST /auth/login`). Public: `/api/status`, `/auth/login`, static assets (GET). CORS outermost middleware → headers on 401 too.
+
+**Phase C progress:** C.1–C.5 = 100% (docs/PHASE-C-ROADMAP.md). Next candidates: real OpenAI API key wiring (see "Integration with Real OpenAI API" in roadmap), wire `/api/agents/*` into main.go, roadmap C.6+ items.
 
 ---
 
