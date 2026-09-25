@@ -49,6 +49,12 @@ func (q *TaskQueue) Enqueue(task *Task) error {
 		return errors.New("task ID required")
 	}
 
+	// Prevent duplicate task IDs (a task may only be enqueued once;
+	// retries re-queue internally via enqueueByPriority, not Enqueue)
+	if _, exists := q.tasks[task.ID]; exists {
+		return errors.New("task already queued or active")
+	}
+
 	if task.Status == "" {
 		task.Status = StatusIdle
 	}
