@@ -80,6 +80,26 @@ func (l *AgentKnowledgeLoader) LoadSkillFase(fase string) (string, error) {
 	return string(content), nil
 }
 
+// LoadSkillNama membaca SKILL.md untuk nama skill tertentu
+// (mis. ujiscan-vuln-xss) dari agents/skills/<nama>/SKILL.md.
+// Berguna untuk skill vuln spesifik yang dipilih AI berdasarkan hasil scan.
+func (l *AgentKnowledgeLoader) LoadSkillNama(nama string) (string, error) {
+	if nama == "" {
+		return "", nil
+	}
+	// Sanitasi: hanya nama folder aman
+	clean := filepath.Base(nama)
+	if clean != nama || strings.Contains(nama, "..") {
+		return "", fmt.Errorf("nama skill tidak valid")
+	}
+	p := filepath.Join(l.agentsDir, "skills", clean, "SKILL.md")
+	content, err := os.ReadFile(p)
+	if err != nil {
+		return "", fmt.Errorf("skill %s tidak ditemukan: %w", nama, err)
+	}
+	return string(content), nil
+}
+
 // LoadToolCatalog membaca agents/tools-catalog.json → daftar tool untuk prompt.
 func (l *AgentKnowledgeLoader) LoadToolCatalog() ([]CatalogTool, error) {
 	raw, err := os.ReadFile(filepath.Join(l.agentsDir, "tools-catalog.json"))

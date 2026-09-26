@@ -32,6 +32,9 @@ type Client struct {
 	endpoint string
 	orgID    string
 
+	// AgentKnowledgeLoader — otak .md rahasia (AGENTS.md + skills + rules)
+	knowledge *AgentKnowledgeLoader
+
 	// C.4.4: learning feedback — tracks per-tool success/failure history
 	feedbackMu sync.Mutex
 	feedback   map[string]*ToolFeedback
@@ -63,6 +66,7 @@ type VulnerabilityAssessment struct {
 	Description string `json:"description"`
 	Impact      string `json:"impact"`
 	ToolSource  string `json:"tool_source"`
+	Evidence    string `json:"evidence,omitempty"`
 }
 
 // NewClient creates new AI client with default provider (deepseek)
@@ -104,12 +108,13 @@ func NewClientWithProvider(provider string) *Client {
 	}
 
 	return &Client{
-		provider: provider,
-		apiKey:   apiKey,
-		model:    model,
-		endpoint: endpoint,
-		orgID:    os.Getenv("OPENAI_ORG_ID"),
-		feedback: make(map[string]*ToolFeedback),
+		provider:  provider,
+		apiKey:    apiKey,
+		model:     model,
+		endpoint:  endpoint,
+		orgID:     os.Getenv("OPENAI_ORG_ID"),
+		feedback:  make(map[string]*ToolFeedback),
+		knowledge: NewAgentKnowledgeLoader("agents"),
 	}
 }
 
@@ -201,8 +206,12 @@ func (c *Client) GetPreferredTools(tools []string) []string {
 
 // AnalyzeToolOutput analyzes security tool output and returns next-step recommendations
 func (c *Client) AnalyzeToolOutput(ctx context.Context, toolName string, output string, objective string) (*AgentDecision, error) {
-	// Create prompt for AI analysis
-	prompt := fmt.Sprintf(`You are an expert penetration tester analyzing security scan results.
+	// System prompt dari .md rahasia (skill fase + rules + master)
+	sysPrompt, _ := c.knowledge.BuildSystemPrompt("vulnscan", objective)
+
+	prompt := sysPrompt + fmt.Sprintf(`
+
+You are an expert penetration tester analyzing security scan results.
 
 Tool: %s
 Objective: %s
@@ -211,7 +220,7 @@ Output:
 
 Based on this output, provide:
 1. Analysis of findings
-2. List of recommended next tools to run (only tool names from: dig, subfinder, nmap, httpx, whatweb, sslscan, nuclei, nikto, gobuster)
+2. List of recommended next tools to run (only tool names from the tools available for this phase)
 3. Reasoning for recommendations
 4. Confidence level (0.0-1.0)
 5. Whether scan should continue or stop
@@ -228,16 +237,30 @@ Respond in JSON format only with keys: analysis, recommended_tools, reasoning, c
 
 // ExtractVulnerabilities extracts structured vulnerabilities from tool output
 func (c *Client) ExtractVulnerabilities(ctx context.Context, toolName string, output string) ([]VulnerabilityAssessment, error) {
-	prompt := fmt.Sprintf(`Extract security vulnerabilities from %s output.
+	// System prompt dari .md (skill vulnscan + rules) — konsisten severity
+	sysPrompt, _ := c.knowledge.BuildSystemPrompt("vulnscan", "")
+
+	// Inject skill vuln spesifik jika ada (mis. tool nuclei → ujiscan-vuln-dll generic,
+	// tool terkait xss → ujiscan-vuln-xss). AI diberi knowledge bertarget.
+	skillCorpus := ""
+	for _, skill := range []string{"ujiscan-vuln-xss", "ujiscan-vuln-sqli", "ujiscan-vuln-ssrf", "ujiscan-vuln-idor", "ujiscan-vuln-lfi", "ujiscan-vuln-ssti", "ujiscan-vuln-open-redirect", "ujiscan-vuln-csrf", "ujiscan-vuln-header", "ujiscan-vuln-ssl"} {
+		if content, err := c.knowledge.LoadSkillNama(skill); err == nil {
+			skillCorpus += "\n" + content
+		}
+	}
+
+	prompt := sysPrompt + skillCorpus + fmt.Sprintf(`
+Extract security vulnerabilities from %s output.
 Output:
 %s
 
 For each vulnerability, provide:
 - title: concise vulnerability name
-- severity: CRITICAL, HIGH, MEDIUM, LOW, INFO
+- severity: CRITICAL, HIGH, MEDIUM, LOW, INFO (sesuai panduan di atas)
 - description: what was found
 - impact: potential business impact
 - tool_source: %s
+- evidence: bukti singkat dari output (wajib ada)
 
 Return as JSON array. If no vulnerabilities found, return empty array.`,
 		toolName, truncateOutput(output, 2000), toolName)
@@ -258,11 +281,15 @@ Return as JSON array. If no vulnerabilities found, return empty array.`,
 
 // SelectToolsForTarget recommends initial tools based on target characteristics
 func (c *Client) SelectToolsForTarget(ctx context.Context, target string, scanType string) ([]string, error) {
-	prompt := fmt.Sprintf(`As a penetration tester, recommend security scanning tools for:
+	// Fase awal = recon → system prompt dari .md
+	sysPrompt, _ := c.knowledge.BuildSystemPrompt("recon", "")
+
+	prompt := sysPrompt + fmt.Sprintf(`
+As a penetration tester, recommend security scanning tools for:
 Target: %s
 Scan Type: %s
 
-Available tools: dig, subfinder, nmap, httpx, whatweb, sslscan, nuclei, nikto, gobuster
+Available tools (dari katalog ujiscan): %s
 
 Return JSON with:
 {
@@ -270,7 +297,8 @@ Return JSON with:
   "reasoning": "why these tools"
 }
 
-Optimize for efficiency - recommend 3-5 most relevant tools first.`, target, scanType)
+Optimize for efficiency - recommend 3-5 most relevant tools first.`,
+		target, scanType, strings.Join(c.knowledge.LoadToolCatalogForPhase("recon"), ", "))
 
 	resp, err := c.callProviderRaw(ctx, prompt)
 	if err != nil {

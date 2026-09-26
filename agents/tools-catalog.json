@@ -1,206 +1,2327 @@
 {
-  "catalog_version": "1.0.0",
-  "description": "ujiscan tool catalog — katalog tools yang AI pilih untuk Full Scan. Tools bertanda local=true tersedia di container; local=false dikatalogkan (rekomendasi/panduan eksekusi remote).",
+  "catalog_version": "1.1.0",
+  "description": "ujiscan tool catalog \u2014 132 tools. local=true tersedia di container; local=false dikatalogkan (rekomendasi/panduan eksekusi remote oleh AI). AI Full Scan memilih tools dari sini berdasarkan fase & target.",
   "tools": [
     {
       "tools_name": "dig",
-      "description": "DNS lookup dan enumerasi record (A, AAAA, MX, TXT, NS).",
+      "description": "DNS lookup & record enumeration (A/AAAA/MX/TXT/NS)",
       "category": "recon",
       "local": true,
-      "command": { "base": "dig", "positional": ["target"] },
-      "phase": ["recon"],
-      "tags": ["dns", "passive", "osint"],
-      "alternatives": ["dnsx", "nslookup"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "dns",
+        "passive",
+        "osint"
+      ],
+      "alternatives": [
+        "dnsx",
+        "nslookup"
+      ]
     },
     {
       "tools_name": "subfinder",
-      "description": "Subdomain enumeration pasif dari sumber publik (crt.sh, dll).",
+      "description": "Subdomain enumeration pasif dari sumber publik",
       "category": "recon",
       "local": true,
-      "command": { "base": "subfinder", "flags": ["-d"], "positional": [] },
-      "phase": ["recon"],
-      "tags": ["subdomain", "passive", "osint"],
-      "alternatives": ["amass", "assetfinder", "sublist3r"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "subdomain",
+        "passive",
+        "osint"
+      ],
+      "alternatives": [
+        "amass",
+        "assetfinder"
+      ]
     },
     {
       "tools_name": "amass",
-      "description": "Subdomain enumeration mendalam dengan OSINT + brute ringan.",
+      "description": "Subdomain enumeration mendalam (OSINT + brute ringan)",
       "category": "recon",
       "local": false,
-      "command": { "base": "amass", "flags": ["enum", "-d"], "positional": [] },
-      "phase": ["recon"],
-      "tags": ["subdomain", "osint"],
-      "alternatives": ["subfinder"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "subdomain",
+        "osint"
+      ],
+      "alternatives": [
+        "subfinder"
+      ]
     },
     {
-      "tools_name": "nmap",
-      "description": "Port scanning, service detection, dan script vuln level dasar.",
-      "category": "enumeration",
-      "local": true,
-      "command": { "base": "nmap", "flags": ["-sV", "-sC", "-p"], "positional": ["target"] },
-      "phase": ["recon", "enumeration"],
-      "tags": ["port", "service", "network"],
-      "alternatives": ["masscan", "naabu", "rustscan"]
-    },
-    {
-      "tools_name": "masscan",
-      "description": "Port scanner ultra cepat untuk jaringan besar (harus hati-hati).",
-      "category": "enumeration",
-      "local": false,
-      "command": { "base": "masscan", "flags": ["-p", "--rate"], "positional": [] },
-      "phase": ["enumeration"],
-      "tags": ["port", "network", "fast"],
-      "alternatives": ["nmap", "naabu"]
-    },
-    {
-      "tools_name": "httpx",
-      "description": "Probing HTTP service, fingerprint server, status code, title.",
-      "category": "enumeration",
-      "local": true,
-      "command": { "base": "httpx", "flags": ["-u"], "positional": [] },
-      "phase": ["enumeration"],
-      "tags": ["http", "web", "fingerprint"],
-      "alternatives": ["curl", "feroxbuster"]
-    },
-    {
-      "tools_name": "whatweb",
-      "description": "Fingerprint teknologi web (CMS, framework, server, plugin).",
-      "category": "enumeration",
-      "local": true,
-      "command": { "base": "whatweb", "positional": ["target"] },
-      "phase": ["enumeration"],
-      "tags": ["web", "fingerprint", "tech"],
-      "alternatives": ["wappalyzer"]
-    },
-    {
-      "tools_name": "sslscan",
-      "description": "Audit SSL/TLS: cipher suites, sertifikat, protokol, kelemahan.",
-      "category": "enumeration",
-      "local": true,
-      "command": { "base": "sslscan", "positional": ["target"] },
-      "phase": ["enumeration"],
-      "tags": ["ssl", "tls", "crypto"],
-      "alternatives": ["testssl.sh", "nmap script ssl-enum-ciphers"]
-    },
-    {
-      "tools_name": "nuclei",
-      "description": "Template-based vulnerability scanner (ribuan template kerentanan).",
-      "category": "vulnscan",
-      "local": true,
-      "command": { "base": "nuclei", "flags": ["-u", "-silent"], "positional": [] },
-      "phase": ["vulnscan"],
-      "tags": ["template", "vuln", "automated"],
-      "alternatives": ["nikto"]
-    },
-    {
-      "tools_name": "nikto",
-      "description": "Web server scanner: file berbahaya, konfigurasi lama, script CGI.",
-      "category": "vulnscan",
-      "local": true,
-      "command": { "base": "nikto", "flags": ["-h"], "positional": [] },
-      "phase": ["vulnscan"],
-      "tags": ["web", "server", "misconfig"],
-      "alternatives": ["nuclei"]
-    },
-    {
-      "tools_name": "gobuster",
-      "description": "Directory/file brute-force pada web server.",
-      "category": "enumeration",
-      "local": true,
-      "command": { "base": "gobuster", "flags": ["dir", "-u", "-w"], "positional": [] },
-      "phase": ["enumeration"],
-      "tags": ["web", "brute", "directory"],
-      "alternatives": ["ffuf", "dirsearch", "feroxbuster"]
-    },
-    {
-      "tools_name": "ffuf",
-      "description": "Fuzzing web: parameter, directory, vhost — sangat cepat.",
-      "category": "enumeration",
-      "local": false,
-      "command": { "base": "ffuf", "flags": ["-u", "-w"], "positional": [] },
-      "phase": ["enumeration", "vulnscan"],
-      "tags": ["web", "fuzz", "fast"],
-      "alternatives": ["gobuster"]
-    },
-    {
-      "tools_name": "sqlmap",
-      "description": "Deteksi dan eksploitasi SQL injection (mode aman: --batch --technique=BEUSTQ).",
-      "category": "exploitation",
-      "local": false,
-      "command": { "base": "sqlmap", "flags": ["-u", "--batch"], "positional": [] },
-      "phase": ["vulnscan", "exploitation"],
-      "tags": ["sqli", "database", "exploit"],
-      "alternatives": ["sqlite3", "manual"]
-    },
-    {
-      "tools_name": "curl",
-      "description": "Request HTTP untuk verifikasi PoC non-destruktif.",
-      "category": "utility",
-      "local": true,
-      "command": { "base": "curl", "flags": ["-s", "-I", "-X"], "positional": ["url"] },
-      "phase": ["verification"],
-      "tags": ["http", "verification", "utility"],
-      "alternatives": ["wget", "httpx"]
-    },
-    {
-      "tools_name": "wafw00f",
-      "description": "Deteksi Web Application Firewall (WAF) di depan target.",
+      "tools_name": "assetfinder",
+      "description": "Subdomain discovery pasif cepat",
       "category": "recon",
       "local": false,
-      "command": { "base": "wafw00f", "positional": ["target"] },
-      "phase": ["recon"],
-      "tags": ["waf", "web", "fingerprint"],
-      "alternatives": ["manual headers"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "subdomain",
+        "passive"
+      ],
+      "alternatives": [
+        "subfinder",
+        "amass"
+      ]
+    },
+    {
+      "tools_name": "sublist3r",
+      "description": "Subdomain enumeration via search engine",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "subdomain",
+        "passive"
+      ],
+      "alternatives": [
+        "subfinder"
+      ]
+    },
+    {
+      "tools_name": "dnsx",
+      "description": "DNS resolver & validation massal",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "dns",
+        "resolution"
+      ],
+      "alternatives": [
+        "dig",
+        "puredns"
+      ]
+    },
+    {
+      "tools_name": "whois",
+      "description": "Registrant & domain ownership info",
+      "category": "recon",
+      "local": true,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "whois"
+      ],
+      "alternatives": [
+        "amass intel"
+      ]
+    },
+    {
+      "tools_name": "shodan",
+      "description": "Internet-wide device & service search (API)",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "passive"
+      ],
+      "alternatives": [
+        "censys",
+        "zoomeye"
+      ]
+    },
+    {
+      "tools_name": "censys",
+      "description": "Certificate & service search",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "cert"
+      ],
+      "alternatives": [
+        "shodan"
+      ]
     },
     {
       "tools_name": "theHarvester",
-      "description": "OSINT: email, subdomain, host dari mesin pencari & sumber publik.",
+      "description": "OSINT email/subdomain/host dari search engine",
       "category": "recon",
       "local": false,
-      "command": { "base": "theHarvester", "flags": ["-d", "-b"], "positional": [] },
-      "phase": ["recon"],
-      "tags": ["osint", "email", "subdomain"],
-      "alternatives": ["subfinder", "spiderfoot"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "email",
+        "subdomain"
+      ],
+      "alternatives": [
+        "subfinder",
+        "spiderfoot"
+      ]
     },
     {
-      "tools_name": "dalfox",
-      "description": "Scanner XSS cepat berbasis parameter fuzzing.",
-      "category": "vulnscan",
+      "tools_name": "spiderfoot",
+      "description": "OSINT automation multi-source",
+      "category": "recon",
       "local": false,
-      "command": { "base": "dalfox", "flags": ["url"], "positional": [] },
-      "phase": ["vulnscan"],
-      "tags": ["xss", "web", "fuzz"],
-      "alternatives": ["nuclei", "manual"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "automation"
+      ],
+      "alternatives": [
+        "theHarvester"
+      ]
     },
     {
-      "tools_name": "testssl.sh",
-      "description": "Deep audit SSL/TLS: protocol, cipher, kelemahan Heartbleed dll.",
-      "category": "vulnscan",
-      "local": false,
-      "command": { "base": "testssl.sh", "positional": ["target"] },
-      "phase": ["vulnscan"],
-      "tags": ["ssl", "tls", "deep"],
-      "alternatives": ["sslscan"]
+      "tools_name": "wafw00f",
+      "description": "Deteksi Web Application Firewall",
+      "category": "recon",
+      "local": true,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "waf",
+        "web"
+      ],
+      "alternatives": [
+        "manual header check"
+      ]
     },
     {
       "tools_name": "gitleaks",
-      "description": "Deteksi secret ter-commit di repositori publik (github dork).",
+      "description": "Deteksi secret ter-commit di repositori",
       "category": "recon",
       "local": false,
-      "command": { "base": "gitleaks", "positional": [] },
-      "phase": ["recon"],
-      "tags": ["secret", "osint", "github"],
-      "alternatives": ["trufflehog", "secretfinder"]
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "secret",
+        "osint",
+        "github"
+      ],
+      "alternatives": [
+        "trufflehog",
+        "secretfinder"
+      ]
+    },
+    {
+      "tools_name": "trufflehog",
+      "description": "Secret scanning deep (regex + entropy)",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "secret",
+        "osint"
+      ],
+      "alternatives": [
+        "gitleaks"
+      ]
+    },
+    {
+      "tools_name": "secretfinder",
+      "description": "Cari secret di JS/page source",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "secret",
+        "web"
+      ],
+      "alternatives": [
+        "gitleaks"
+      ]
+    },
+    {
+      "tools_name": "dnstwist",
+      "description": "Deteksi domain typosquatting & lookalike",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "dns",
+        "brand",
+        "osint"
+      ],
+      "alternatives": [
+        "urlscan"
+      ]
+    },
+    {
+      "tools_name": "urlscan.io",
+      "description": "URL & website scanning (API)",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "url"
+      ],
+      "alternatives": [
+        "virustotal"
+      ]
+    },
+    {
+      "tools_name": "waybackurls",
+      "description": "Kumpulkan URL dari Wayback Machine",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "url",
+        "archive",
+        "osint"
+      ],
+      "alternatives": [
+        "gau"
+      ]
+    },
+    {
+      "tools_name": "gau",
+      "description": "GetAllURLs \u2014 kumpulan URL dari sumber arsip",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "url",
+        "archive"
+      ],
+      "alternatives": [
+        "waybackurls"
+      ]
+    },
+    {
+      "tools_name": "katana",
+      "description": "Crawler web modern (ProjectDiscovery)",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "crawl",
+        "url",
+        "web"
+      ],
+      "alternatives": [
+        "gospider",
+        "hakrawler"
+      ]
+    },
+    {
+      "tools_name": "gospider",
+      "description": "Crawler web cepat (link/js/form)",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "crawl",
+        "url"
+      ],
+      "alternatives": [
+        "katana",
+        "hakrawler"
+      ]
+    },
+    {
+      "tools_name": "hakrawler",
+      "description": "Crawler sederhana untuk pentest web",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "crawl",
+        "url"
+      ],
+      "alternatives": [
+        "katana"
+      ]
+    },
+    {
+      "tools_name": "robots-dot-txt",
+      "description": "Analisis robots.txt untuk endpoint tersembunyi",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "web",
+        "endpoint"
+      ],
+      "alternatives": [
+        "manual"
+      ]
+    },
+    {
+      "tools_name": "crt.sh",
+      "description": "Certificate transparency log search",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "cert",
+        "subdomain",
+        "osint"
+      ],
+      "alternatives": [
+        "amass"
+      ]
+    },
+    {
+      "tools_name": "fofa",
+      "description": "Internet search engine (API)",
+      "category": "recon",
+      "local": false,
+      "phase": [
+        "recon"
+      ],
+      "tags": [
+        "osint",
+        "passive"
+      ],
+      "alternatives": [
+        "shodan"
+      ]
+    },
+    {
+      "tools_name": "nmap",
+      "description": "Port scanning, service detection, NSE scripts",
+      "category": "enumeration",
+      "local": true,
+      "phase": [
+        "recon",
+        "enumeration"
+      ],
+      "tags": [
+        "port",
+        "service",
+        "network"
+      ],
+      "alternatives": [
+        "masscan",
+        "naabu"
+      ]
+    },
+    {
+      "tools_name": "masscan",
+      "description": "Port scanner ultra cepat (masif)",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "port",
+        "fast",
+        "network"
+      ],
+      "alternatives": [
+        "nmap",
+        "naabu"
+      ]
+    },
+    {
+      "tools_name": "naabu",
+      "description": "Port scanner cepat (ProjectDiscovery)",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "port",
+        "fast"
+      ],
+      "alternatives": [
+        "nmap",
+        "masscan"
+      ]
+    },
+    {
+      "tools_name": "rustscan",
+      "description": "Port scanner paralel dalam Rust",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "port",
+        "fast"
+      ],
+      "alternatives": [
+        "naabu",
+        "masscan"
+      ]
+    },
+    {
+      "tools_name": "httpx",
+      "description": "HTTP probing & fingerprint (status/title/tech)",
+      "category": "enumeration",
+      "local": true,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "http",
+        "web",
+        "fingerprint"
+      ],
+      "alternatives": [
+        "curl",
+        "httprobe"
+      ]
+    },
+    {
+      "tools_name": "httprobe",
+      "description": "Probe host live via HTTP/HTTPS",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "http",
+        "probe"
+      ],
+      "alternatives": [
+        "httpx"
+      ]
+    },
+    {
+      "tools_name": "whatweb",
+      "description": "Fingerprint teknologi web (CMS/framework/server)",
+      "category": "enumeration",
+      "local": true,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "web",
+        "fingerprint",
+        "tech"
+      ],
+      "alternatives": [
+        "wappalyzer"
+      ]
+    },
+    {
+      "tools_name": "wappalyzer",
+      "description": "Tech detection via signature database",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "web",
+        "fingerprint"
+      ],
+      "alternatives": [
+        "whatweb"
+      ]
+    },
+    {
+      "tools_name": "sslscan",
+      "description": "Audit SSL/TLS cipher & protocol",
+      "category": "enumeration",
+      "local": true,
+      "phase": [
+        "enumeration",
+        "vulnscan"
+      ],
+      "tags": [
+        "ssl",
+        "tls",
+        "crypto"
+      ],
+      "alternatives": [
+        "testssl.sh"
+      ]
+    },
+    {
+      "tools_name": "testssl.sh",
+      "description": "Deep SSL/TLS audit (Heartbleed dll)",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "vulnscan"
+      ],
+      "tags": [
+        "ssl",
+        "tls",
+        "deep"
+      ],
+      "alternatives": [
+        "sslscan"
+      ]
+    },
+    {
+      "tools_name": "gobuster",
+      "description": "Directory/file/vhost brute-force",
+      "category": "enumeration",
+      "local": true,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "web",
+        "brute",
+        "directory"
+      ],
+      "alternatives": [
+        "ffuf",
+        "feroxbuster"
+      ]
+    },
+    {
+      "tools_name": "ffuf",
+      "description": "Fuzzing web super cepat (dir/param/vhost)",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration",
+        "vulnscan"
+      ],
+      "tags": [
+        "web",
+        "fuzz",
+        "fast"
+      ],
+      "alternatives": [
+        "gobuster"
+      ]
+    },
+    {
+      "tools_name": "dirsearch",
+      "description": "Directory scanner (banyak ekstensi)",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "web",
+        "directory",
+        "brute"
+      ],
+      "alternatives": [
+        "gobuster",
+        "ffuf"
+      ]
     },
     {
       "tools_name": "feroxbuster",
-      "description": "Content discovery web: directory + file brute, support recursion.",
+      "description": "Content discovery recursive dgn Rust",
       "category": "enumeration",
       "local": false,
-      "command": { "base": "feroxbuster", "flags": ["-u", "-w"], "positional": [] },
-      "phase": ["enumeration"],
-      "tags": ["web", "directory", "brute"],
-      "alternatives": ["ffuf", "gobuster", "dirsearch"]
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "web",
+        "directory",
+        "brute"
+      ],
+      "alternatives": [
+        "ffuf",
+        "gobuster"
+      ]
+    },
+    {
+      "tools_name": "enum4linux",
+      "description": "SMB/NetBIOS enumeration",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration"
+      ],
+      "tags": [
+        "smb",
+        "windows",
+        "netbios"
+      ],
+      "alternatives": [
+        "netexec"
+      ]
+    },
+    {
+      "tools_name": "netexec",
+      "description": "Network service exploitation & enumeration (nxc)",
+      "category": "enumeration",
+      "local": false,
+      "phase": [
+        "enumeration",
+        "exploitation"
+      ],
+      "tags": [
+        "smb",
+        "winrm",
+        "wmi"
+      ],
+      "alternatives": [
+        "crackmapexec"
+      ]
+    },
+    {
+      "tools_name": "nuclei",
+      "description": "Template vulnerability scanner (ribuan template)",
+      "category": "vulnscan",
+      "local": true,
+      "phase": [
+        "vulnscan"
+      ],
+      "tags": [
+        "template",
+        "vuln",
+        "automated"
+      ],
+      "alternatives": [
+        "nikto"
+      ]
+    },
+    {
+      "tools_name": "nikto",
+      "description": "Web server scanner (CGI/konfig/perilous file)",
+      "category": "vulnscan",
+      "local": true,
+      "phase": [
+        "vulnscan"
+      ],
+      "tags": [
+        "web",
+        "server",
+        "misconfig"
+      ],
+      "alternatives": [
+        "nuclei"
+      ]
+    },
+    {
+      "tools_name": "dalfox",
+      "description": "Parameter XSS scanner cepat",
+      "category": "vulnscan",
+      "local": false,
+      "phase": [
+        "vulnscan"
+      ],
+      "tags": [
+        "xss",
+        "web",
+        "fuzz"
+      ],
+      "alternatives": [
+        "nuclei",
+        "manual"
+      ]
+    },
+    {
+      "tools_name": "sqlmap",
+      "description": "SQL injection detection & exploitation (mode aman)",
+      "category": "vulnscan",
+      "local": false,
+      "phase": [
+        "vulnscan",
+        "exploitation"
+      ],
+      "tags": [
+        "sqli",
+        "database"
+      ],
+      "alternatives": [
+        "nosqlmap",
+        "manual"
+      ]
+    },
+    {
+      "tools_name": "nosqlmap",
+      "description": "NoSQL injection detection (MongoDB)",
+      "category": "vulnscan",
+      "local": false,
+      "phase": [
+        "vulnscan"
+      ],
+      "tags": [
+        "nosql",
+        "mongodb",
+        "sqli"
+      ],
+      "alternatives": [
+        "sqlmap"
+      ]
+    },
+    {
+      "tools_name": "arjun",
+      "description": "Parameter discovery untuk HTTP",
+      "category": "vulnscan",
+      "local": false,
+      "phase": [
+        "vulnscan"
+      ],
+      "tags": [
+        "parameter",
+        "web",
+        "fuzz"
+      ],
+      "alternatives": [
+        "ffuf"
+      ]
+    },
+    {
+      "tools_name": "burpsuite",
+      "description": "Web proxy & intercept (manual testing)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation",
+        "vulnscan"
+      ],
+      "tags": [
+        "proxy",
+        "web",
+        "manual"
+      ],
+      "alternatives": [
+        "mitmproxy",
+        "zap"
+      ]
+    },
+    {
+      "tools_name": "owasp-zap",
+      "description": "Web app scanner open-source (ZAP)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation",
+        "vulnscan"
+      ],
+      "tags": [
+        "web",
+        "scanner"
+      ],
+      "alternatives": [
+        "burpsuite"
+      ]
+    },
+    {
+      "tools_name": "metasploit",
+      "description": "Exploit framework + auxiliary modules",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "exploit",
+        "framework",
+        "payload"
+      ],
+      "alternatives": [
+        "nuclei"
+      ]
+    },
+    {
+      "tools_name": "pwntools",
+      "description": "Python exploit development library",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "exploit",
+        "python",
+        "pwn"
+      ],
+      "alternatives": [
+        "manual"
+      ]
+    },
+    {
+      "tools_name": "hydra",
+      "description": "Online password brute-force (ssh/ftp/http...)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "brute",
+        "password",
+        "auth"
+      ],
+      "alternatives": [
+        "medusa",
+        "patator"
+      ]
+    },
+    {
+      "tools_name": "medusa",
+      "description": "Parallel login brute-forcer",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "brute",
+        "password"
+      ],
+      "alternatives": [
+        "hydra"
+      ]
+    },
+    {
+      "tools_name": "patator",
+      "description": "Multi-purpose brute-forcer",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "brute",
+        "auth"
+      ],
+      "alternatives": [
+        "hydra"
+      ]
+    },
+    {
+      "tools_name": "hashcat",
+      "description": "Password cracking via GPU (hash)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "crack",
+        "hash",
+        "gpu"
+      ],
+      "alternatives": [
+        "john"
+      ]
+    },
+    {
+      "tools_name": "john",
+      "description": "John the Ripper \u2014 password cracking",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "crack",
+        "hash"
+      ],
+      "alternatives": [
+        "hashcat"
+      ]
+    },
+    {
+      "tools_name": "evil-winrm",
+      "description": "WinRM shell untuk Windows target",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "winrm",
+        "windows",
+        "shell"
+      ],
+      "alternatives": [
+        "netexec"
+      ]
+    },
+    {
+      "tools_name": "kerbrute",
+      "description": "Kerberos user enumeration & password spray",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "kerberos",
+        "ad",
+        "brute"
+      ],
+      "alternatives": [
+        "netexec",
+        "rubeus"
+      ]
+    },
+    {
+      "tools_name": "responder",
+      "description": "LLMNR/NBT-NS poisoning",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "ad",
+        "llmnr",
+        "poison"
+      ],
+      "alternatives": [
+        "bettercap"
+      ]
+    },
+    {
+      "tools_name": "impacket",
+      "description": "Python tools untuk AD protocols (ntlmrelayx dll)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "ad",
+        "windows",
+        "protocols"
+      ],
+      "alternatives": [
+        "netexec"
+      ]
+    },
+    {
+      "tools_name": "bloodhound",
+      "description": "AD attack graph visualization",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "ad",
+        "graph",
+        "privesc"
+      ],
+      "alternatives": [
+        "sharphound"
+      ]
+    },
+    {
+      "tools_name": "certipy",
+      "description": "ADCS certificate attack tool",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "ad",
+        "certificate",
+        "attack"
+      ],
+      "alternatives": [
+        "certipy-ad"
+      ]
+    },
+    {
+      "tools_name": "chisel",
+      "description": "Tunnel cepat (HTTP over TCP) untuk pivot",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "tunnel",
+        "pivot",
+        "proxy"
+      ],
+      "alternatives": [
+        "ligolo-ng"
+      ]
+    },
+    {
+      "tools_name": "ligolo-ng",
+      "description": "Tunneling agent untuk internal networks",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "tunnel",
+        "pivot"
+      ],
+      "alternatives": [
+        "chisel"
+      ]
+    },
+    {
+      "tools_name": "sliver",
+      "description": "C2 framework (open source)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "c2",
+        "implant",
+        "post-exploit"
+      ],
+      "alternatives": [
+        "havoc",
+        "mythic"
+      ]
+    },
+    {
+      "tools_name": "pwncat-cs",
+      "description": "Post-exploitation bind/backdoor handler",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "reverse-shell",
+        "post-exploit"
+      ],
+      "alternatives": [
+        "metasploit"
+      ]
+    },
+    {
+      "tools_name": "peass-ng",
+      "description": "Privilege escalation enumeration (Linux/Win)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "privesc",
+        "enum",
+        "linux",
+        "windows"
+      ],
+      "alternatives": [
+        "linpeas",
+        "winpeas"
+      ]
+    },
+    {
+      "tools_name": "crackmapexec",
+      "description": "Post-exploit AD tool (smb/winrm/mssql)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "ad",
+        "smb",
+        "post-exploit"
+      ],
+      "alternatives": [
+        "netexec"
+      ]
+    },
+    {
+      "tools_name": "evilginx3",
+      "description": "Phishing reverse proxy (token steal)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "phishing",
+        "mfa-bypass"
+      ],
+      "alternatives": [
+        "setoolkit"
+      ]
+    },
+    {
+      "tools_name": "setoolkit",
+      "description": "Social Engineering Toolkit",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "phishing",
+        "social"
+      ],
+      "alternatives": [
+        "evilginx3"
+      ]
+    },
+    {
+      "tools_name": "routersploit",
+      "description": "Router/embedded device exploit framework",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "router",
+        "iot",
+        "exploit"
+      ],
+      "alternatives": [
+        "metasploit"
+      ]
+    },
+    {
+      "tools_name": "hardware",
+      "description": "Hardware pentest tools (JTAG/UART)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "hardware",
+        "io"
+      ],
+      "alternatives": [
+        "manual"
+      ]
+    },
+    {
+      "tools_name": "slowloris",
+      "description": "Slowloris DoS (HANYA lab, approval wajib)",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "dos",
+        "slow",
+        "lab"
+      ],
+      "alternatives": [
+        "manual"
+      ]
+    },
+    {
+      "tools_name": "haiti",
+      "description": "Hash type identifier",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "hash",
+        "identify",
+        "crypto"
+      ],
+      "alternatives": [
+        "hashid"
+      ]
+    },
+    {
+      "tools_name": "steghide",
+      "description": "Steganography embed/extract",
+      "category": "exploitation",
+      "local": false,
+      "phase": [
+        "exploitation"
+      ],
+      "tags": [
+        "stego",
+        "forensics"
+      ],
+      "alternatives": [
+        "stegcracker"
+      ]
+    },
+    {
+      "tools_name": "curl",
+      "description": "HTTP request untuk verifikasi PoC non-destruktif",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "verification"
+      ],
+      "tags": [
+        "http",
+        "verify",
+        "utility"
+      ],
+      "alternatives": [
+        "wget",
+        "httpx"
+      ]
+    },
+    {
+      "tools_name": "wget",
+      "description": "Download & HTTP request",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "verification"
+      ],
+      "tags": [
+        "http",
+        "download"
+      ],
+      "alternatives": [
+        "curl"
+      ]
+    },
+    {
+      "tools_name": "jq",
+      "description": "JSON processor untuk parsing output",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "json",
+        "parse"
+      ],
+      "alternatives": [
+        "python3"
+      ]
+    },
+    {
+      "tools_name": "grep",
+      "description": "Text search di output",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "text",
+        "search"
+      ],
+      "alternatives": [
+        "rg"
+      ]
+    },
+    {
+      "tools_name": "sort",
+      "description": "Sorting text output",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "text"
+      ],
+      "alternatives": [
+        "uniq"
+      ]
+    },
+    {
+      "tools_name": "uniq",
+      "description": "Deduplikasi list (subdomain/host)",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "text",
+        "dedupe"
+      ],
+      "alternatives": [
+        "sort"
+      ]
+    },
+    {
+      "tools_name": "anew",
+      "description": "Append unik ke file (line dedupe)",
+      "category": "utility",
+      "local": false,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "text",
+        "dedupe"
+      ],
+      "alternatives": [
+        "sort -u"
+      ]
+    },
+    {
+      "tools_name": "notify",
+      "description": "Notifikasi hasil scan ke webhook",
+      "category": "utility",
+      "local": false,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "notify",
+        "automation"
+      ],
+      "alternatives": [
+        "apprise"
+      ]
+    },
+    {
+      "tools_name": "python3",
+      "description": "Scripting & parsing custom",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "script",
+        "automation"
+      ],
+      "alternatives": [
+        "go run"
+      ]
+    },
+    {
+      "tools_name": "git",
+      "description": "Version control & repo clone",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "vcs",
+        "clone"
+      ],
+      "alternatives": []
+    },
+    {
+      "tools_name": "tar",
+      "description": "Arsip & ekstraksi file",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "archive"
+      ],
+      "alternatives": [
+        "unzip"
+      ]
+    },
+    {
+      "tools_name": "zip",
+      "description": "Arsip & kompresi",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "archive"
+      ],
+      "alternatives": [
+        "tar"
+      ]
+    },
+    {
+      "tools_name": "openssl",
+      "description": "Crypto & cert inspection",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "crypto",
+        "cert",
+        "ssl"
+      ],
+      "alternatives": [
+        "testssl.sh"
+      ]
+    },
+    {
+      "tools_name": "base64",
+      "description": "Encoding/decoding payload",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "encode",
+        "payload"
+      ],
+      "alternatives": [
+        "xxd"
+      ]
+    },
+    {
+      "tools_name": "xxd",
+      "description": "Hex dump & reverse",
+      "category": "utility",
+      "local": true,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "hex",
+        "binary"
+      ],
+      "alternatives": [
+        "od"
+      ]
+    },
+    {
+      "tools_name": "netcat",
+      "description": "Port connect & raw interaction",
+      "category": "utility",
+      "local": false,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "network",
+        "connect"
+      ],
+      "alternatives": [
+        "socat"
+      ]
+    },
+    {
+      "tools_name": "socat",
+      "description": "Relay & socket forwarding",
+      "category": "utility",
+      "local": false,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "network",
+        "relay"
+      ],
+      "alternatives": [
+        "netcat"
+      ]
+    },
+    {
+      "tools_name": "tmux",
+      "description": "Terminal multiplexer (persistent session)",
+      "category": "utility",
+      "local": false,
+      "phase": [
+        "utility"
+      ],
+      "tags": [
+        "terminal",
+        "session"
+      ],
+      "alternatives": [
+        "screen"
+      ]
+    },
+    {
+      "tools_name": "volatility",
+      "description": "Memory forensics framework",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "memory",
+        "ram",
+        "forensics"
+      ],
+      "alternatives": [
+        "strings"
+      ]
+    },
+    {
+      "tools_name": "wireshark",
+      "description": "Network traffic analysis GUI",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "pcap",
+        "network",
+        "analysis"
+      ],
+      "alternatives": [
+        "tshark"
+      ]
+    },
+    {
+      "tools_name": "tshark",
+      "description": "CLI packet analysis (wireshark)",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "pcap",
+        "network"
+      ],
+      "alternatives": [
+        "tcpdump"
+      ]
+    },
+    {
+      "tools_name": "tcpdump",
+      "description": "Packet capture CLI",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "pcap",
+        "capture"
+      ],
+      "alternatives": [
+        "tshark"
+      ]
+    },
+    {
+      "tools_name": "yara",
+      "description": "Malware pattern matching",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "malware",
+        "pattern"
+      ],
+      "alternatives": [
+        "strings"
+      ]
+    },
+    {
+      "tools_name": "autopsy",
+      "description": "Disk forensics GUI",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "disk",
+        "filesystem"
+      ],
+      "alternatives": [
+        "sleuthkit"
+      ]
+    },
+    {
+      "tools_name": "binwalk",
+      "description": "Firmware/embedded file extraction",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "firmware",
+        "extract"
+      ],
+      "alternatives": [
+        "strings"
+      ]
+    },
+    {
+      "tools_name": "foremost",
+      "description": "File carving dari raw data",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "carve",
+        "recover"
+      ],
+      "alternatives": [
+        "bulk_extractor"
+      ]
+    },
+    {
+      "tools_name": "bulk_extractor",
+      "description": "Data extraction massal (email/URL/card)",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "extract",
+        "osint"
+      ],
+      "alternatives": [
+        "foremost"
+      ]
+    },
+    {
+      "tools_name": "exiftool",
+      "description": "Metadata extraction (EXIF)",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "metadata",
+        "photo"
+      ],
+      "alternatives": [
+        "strings"
+      ]
+    },
+    {
+      "tools_name": "john-the-ripper",
+      "description": "Password hash cracking (forensic)",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "crack",
+        "hash"
+      ],
+      "alternatives": [
+        "hashcat"
+      ]
+    },
+    {
+      "tools_name": "stegcracker",
+      "description": "Stego brute-force pasword",
+      "category": "forensics",
+      "local": false,
+      "phase": [
+        "forensics"
+      ],
+      "tags": [
+        "stego",
+        "brute"
+      ],
+      "alternatives": [
+        "steghide"
+      ]
+    },
+    {
+      "tools_name": "ghidra",
+      "description": "Reverse engineering suite (NSA)",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "re",
+        "disassemble",
+        "decompile"
+      ],
+      "alternatives": [
+        "radare2",
+        "ida"
+      ]
+    },
+    {
+      "tools_name": "radare2",
+      "description": "Binary analysis framework",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "re",
+        "disassemble"
+      ],
+      "alternatives": [
+        "ghidra",
+        "gdb"
+      ]
+    },
+    {
+      "tools_name": "gdb",
+      "description": "GNU debugger (binary debugging)",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "debug",
+        "binary"
+      ],
+      "alternatives": [
+        "lldb",
+        "pwndbg"
+      ]
+    },
+    {
+      "tools_name": "pwndbg",
+      "description": "GDB plugin untuk exploit dev",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "debug",
+        "pwn"
+      ],
+      "alternatives": [
+        "gef",
+        "peda"
+      ]
+    },
+    {
+      "tools_name": "objdump",
+      "description": "Disassemble binary",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "disassemble",
+        "binary"
+      ],
+      "alternatives": [
+        "radare2"
+      ]
+    },
+    {
+      "tools_name": "strings",
+      "description": "Ekstrak string dari binary",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "strings",
+        "binary"
+      ],
+      "alternatives": [
+        "grep"
+      ]
+    },
+    {
+      "tools_name": "ltrace",
+      "description": "Library call tracing",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "trace",
+        "library"
+      ],
+      "alternatives": [
+        "strace"
+      ]
+    },
+    {
+      "tools_name": "strace",
+      "description": "System call tracing",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "trace",
+        "syscall"
+      ],
+      "alternatives": [
+        "ltrace"
+      ]
+    },
+    {
+      "tools_name": "angr",
+      "description": "Symbolic execution framework",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "symbolic",
+        "analysis"
+      ],
+      "alternatives": [
+        "gdb"
+      ]
+    },
+    {
+      "tools_name": "cutter",
+      "description": "GUI untuk radare2",
+      "category": "reverse-engineering",
+      "local": false,
+      "phase": [
+        "reverse-engineering"
+      ],
+      "tags": [
+        "re",
+        "gui"
+      ],
+      "alternatives": [
+        "ghidra"
+      ]
+    },
+    {
+      "tools_name": "apktool",
+      "description": "Android APK decode/rebuild",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "apk",
+        "re"
+      ],
+      "alternatives": [
+        "jadx"
+      ]
+    },
+    {
+      "tools_name": "jadx",
+      "description": "Android dex\u2192java decompiler",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "decompile"
+      ],
+      "alternatives": [
+        "apktool"
+      ]
+    },
+    {
+      "tools_name": "frida",
+      "description": "Dynamic instrumentation framework",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "dynamic",
+        "hook",
+        "instrument"
+      ],
+      "alternatives": [
+        "objection"
+      ]
+    },
+    {
+      "tools_name": "objection",
+      "description": "Frida-powered mobile pentest toolkit",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "ios",
+        "dynamic"
+      ],
+      "alternatives": [
+        "frida"
+      ]
+    },
+    {
+      "tools_name": "mobsf",
+      "description": "Mobile Security Framework (static+dynamic)",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "ios",
+        "scan"
+      ],
+      "alternatives": [
+        "apktool"
+      ]
+    },
+    {
+      "tools_name": "adb",
+      "description": "Android Debug Bridge (device control)",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "device"
+      ],
+      "alternatives": [
+        "scrcpy"
+      ]
+    },
+    {
+      "tools_name": "appium",
+      "description": "Mobile automation testing",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "ios",
+        "automation"
+      ],
+      "alternatives": [
+        "adb"
+      ]
+    },
+    {
+      "tools_name": "idevice",
+      "description": "iOS device interaction",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "ios",
+        "device"
+      ],
+      "alternatives": [
+        "libimobiledevice"
+      ]
+    },
+    {
+      "tools_name": "androguard",
+      "description": "Android APK static analysis",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "analysis"
+      ],
+      "alternatives": [
+        "jadx"
+      ]
+    },
+    {
+      "tools_name": "qlippy",
+      "description": "Quality of life helper (mobile)",
+      "category": "mobile",
+      "local": false,
+      "phase": [
+        "mobile"
+      ],
+      "tags": [
+        "android",
+        "helper"
+      ],
+      "alternatives": []
+    },
+    {
+      "tools_name": "awscli",
+      "description": "AWS CLI (misconfig audit)",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "verification"
+      ],
+      "tags": [
+        "cloud",
+        "aws",
+        "config"
+      ],
+      "alternatives": [
+        "prowler"
+      ]
+    },
+    {
+      "tools_name": "prowler",
+      "description": "AWS/Azure/GCP security scanner",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "cloud",
+        "aws",
+        "azure",
+        "gcp"
+      ],
+      "alternatives": [
+        "scoutsuite"
+      ]
+    },
+    {
+      "tools_name": "scoutsuite",
+      "description": "Multi-cloud security auditing",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "cloud",
+        "aws",
+        "azure",
+        "gcp"
+      ],
+      "alternatives": [
+        "prowler"
+      ]
+    },
+    {
+      "tools_name": "trufflehog3",
+      "description": "Cloud secret scanning",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "secret",
+        "cloud"
+      ],
+      "alternatives": [
+        "gitleaks"
+      ]
+    },
+    {
+      "tools_name": "pacu",
+      "description": "AWS exploitation framework",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud",
+        "exploitation"
+      ],
+      "tags": [
+        "aws",
+        "exploit"
+      ],
+      "alternatives": [
+        "prowler"
+      ]
+    },
+    {
+      "tools_name": "az cli",
+      "description": "Azure CLI",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "azure",
+        "config"
+      ],
+      "alternatives": [
+        "prowler"
+      ]
+    },
+    {
+      "tools_name": "gcloud",
+      "description": "Google Cloud CLI",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "gcp",
+        "config"
+      ],
+      "alternatives": [
+        "prowler"
+      ]
+    },
+    {
+      "tools_name": "trivy",
+      "description": "Container/image vulnerability scanner",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud",
+        "vulnscan"
+      ],
+      "tags": [
+        "container",
+        "docker",
+        "vuln"
+      ],
+      "alternatives": [
+        "grype"
+      ]
+    },
+    {
+      "tools_name": "grype",
+      "description": "Container image CVE scanner",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud",
+        "vulnscan"
+      ],
+      "tags": [
+        "container",
+        "cve"
+      ],
+      "alternatives": [
+        "trivy"
+      ]
+    },
+    {
+      "tools_name": "kube-hunter",
+      "description": "Kubernetes security hunting",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "k8s",
+        "kubernetes",
+        "vuln"
+      ],
+      "alternatives": [
+        "kubeaudit"
+      ]
+    },
+    {
+      "tools_name": "kubeaudit",
+      "description": "Kubernetes config audit",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "k8s",
+        "config"
+      ],
+      "alternatives": [
+        "kube-hunter"
+      ]
+    },
+    {
+      "tools_name": "cfuzz",
+      "description": "Cloudflare fuzzing helper",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud"
+      ],
+      "tags": [
+        "cloudflare",
+        "fuzz"
+      ],
+      "alternatives": [
+        "ffuf"
+      ]
+    },
+    {
+      "tools_name": "domain_enum",
+      "description": "Cloud asset enumeration (s3/dns)",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud",
+        "recon"
+      ],
+      "tags": [
+        "s3",
+        "bucket",
+        "enum"
+      ],
+      "alternatives": [
+        "cloud_enum"
+      ]
+    },
+    {
+      "tools_name": "cloud_enum",
+      "description": "Cloud asset discovery (AWS/GCP/Azure)",
+      "category": "cloud",
+      "local": false,
+      "phase": [
+        "cloud",
+        "recon"
+      ],
+      "tags": [
+        "s3",
+        "bucket",
+        "osint"
+      ],
+      "alternatives": [
+        "manual"
+      ]
     }
   ]
 }
