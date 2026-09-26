@@ -600,7 +600,8 @@ table.data td { padding:11px 12px; border-bottom:1px solid var(--border); }
 // CONFIG
 // ============================================================================
 const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const API_BASE = isLocalhost ? 'http://localhost:8081' : 'https://representatives-equal-batman-maximize.trycloudflare.com';
+// AUTO: use same origin as page (works with any tunnel URL)
+const API_BASE = isLocalhost ? 'http://localhost:8081' : window.location.origin;
 
 const TOOLS = ['dig','subfinder','nmap','httpx','whatweb','sslscan','nuclei','gobuster','nikto'];
 const CORES = { dig:'DNS lookup', subfinder:'Subdomain', nmap:'Port scan', httpx:'HTTP probe',
