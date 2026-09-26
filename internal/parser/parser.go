@@ -447,6 +447,11 @@ func parseNucleiOutput(output string, scanID string, target string) []models.Fin
 			title = "Vulnerability Detected"
 		}
 		
+		hostname := target
+		if url != "" {
+			hostname = url
+		}
+		
 		finding := models.Finding{
 			FindingType: models.FindingTypeOther,
 			Severity:    severity,
@@ -454,7 +459,7 @@ func parseNucleiOutput(output string, scanID string, target string) []models.Fin
 			Description: fmt.Sprintf("Nuclei template %s matched on %s", templateID, target),
 			Evidence:    line,
 			Remediation: "Review vulnerability details and apply vendor patches. Consult CVE database for specific remediation.",
-			Hostname:    target,
+			Hostname:    hostname,
 		}
 		
 		findings = append(findings, finding)
