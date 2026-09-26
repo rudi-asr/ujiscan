@@ -699,6 +699,7 @@ function handleLogout(){
     localStorage.removeItem('ujiscan_token');
     localStorage.removeItem('ujiscan_user');
     refreshAuthUI();
+    go('login');  // Force ke login view
     toast('Logged out');
 }
 
