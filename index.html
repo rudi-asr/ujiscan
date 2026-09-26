@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ujiscan — Agentic Pentest Platform</title>
+    <!-- Markdown renderer (robust) — untuk AI report -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <style>
+/* ============ RESET & TOKENS ============ */
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+    --radius: 10px;
+    --shadow: 0 2px 12px rgba(0,0,0,.35);
+    --transition: .2s ease;
+}
+html[data-theme="dark"] {
+    --bg: #0b0f1e;
+    --bg2: #121830;
+    --bg3: #1b2342;
+    --card: #151c38;
+    --border: #252e55;
+    --fg: #e6e9f5;
+    --muted: #8b94b8;
+    --accent: #4dd4ff;
+    --accent2: #7c5cff;
+    --success: #2fe6a5;
+    --warning: #ffb547;
+    --error: #ff5d7a;
+    --critical: #ff3b5c;
+    --high: #ff7a3b;
+    --medium: #ffc84a;
+    --low: #52d273;
+    --info: #4aa8ff;
+}
+html[data-theme="light"] {
+    --bg: #f4f6fb;
+    --bg2: #ffffff;
+    --bg3: #eef1f8;
+    --card: #ffffff;
+    --border: #dde3f0;
+    --fg: #1a2138;
+    --muted: #66708f;
+    --accent: #0366d6;
+    --accent2: #6a3ff5;
+    --success: #0f9d6e;
+    --warning: #c77c14;
+    --error: #d43d5a;
+    --critical: #dd2145;
+    --high: #e0601a;
+    --medium: #c79212;
+    --low: #1f9d46;
+    --info: #1f7edb;
+}
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.55;
+    min-height: 100vh;
+}
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+.hidden { display:none !important; }
+
+/* ============ LAYOUT ============ */
+.app { display:flex; min-height:100vh; }
+
+/* Sidebar */
+.sidebar {
+    width: 240px; flex-shrink:0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 22px 14px;
+    display:flex; flex-direction:column; gap:4px;
+    position: sticky; top:0; height:100vh; overflow-y:auto;
+}
+.brand { display:flex; align-items:center; gap:10px; padding: 4px 10px 18px; }
+.brand .logo {
+    width:38px; height:38px; border-radius:10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display:flex; align-items:center; justify-content:center;
+    font-size:19px; font-weight:800; color:#fff;
+}
+.brand .name { font-weight:700; font-size:17px; letter-spacing:-.2px; }
+.brand .tag { font-size:10.5px; color:var(--muted); }
+.nav-item {
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:8px;
+    color:var(--muted); text-decoration:none; font-size:14px;
+    border:none; background:none; text-align:left; width:100%;
+    transition: var(--transition);
+}
+.nav-item:hover { background: var(--bg3); color: var(--fg); }
+.nav-item.active { background: var(--bg3); color: var(--accent); font-weight:600; }
+.nav-item .ico { font-size:16px; width:20px; text-align:center; }
+.sidebar .spacer { flex:1; }
+
+/* Main */
+.main { flex:1; padding:26px 34px; max-width:1200px; }
+
+/* Topbar */
+.topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:24px; gap:14px; flex-wrap:wrap;
+}
+.topbar h1 { font-size:22px; font-weight:700; letter-spacing:-.3px; }
+.topbar .sub { color:var(--muted); font-size:12.5px; margin-top:2px; }
+.topbar-right { display:flex; gap:10px; align-items:center; }
+.btn-theme {
+    background:var(--card); border:1px solid var(--border); color:var(--fg);
+    padding:8px 12px; border-radius:8px; font-size:15px;
+}
+.chip {
+    display:flex; align-items:center; gap:8px;
+    background:var(--card); border:1px solid var(--border);
+    padding:7px 14px; border-radius:20px; font-size:13px;
+}
+.chip .dot { width:8px; height:8px; border-radius:50%; background:var(--success); }
+
+/* ============ CARDS & GRID ============ */
+.card {
+    background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:22px; margin-bottom:18px;
+}
+.card h2 { font-size:16px; font-weight:650; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+.card h2 .hint { font-size:11.5px; color:var(--muted); font-weight:400; }
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+@media (max-width:900px) { .grid-2,.grid-3 { grid-template-columns:1fr; } }
+
+/* ============ STATS ============ */
+.stat {
+    background:var(--card); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px;
+}
+.stat .num { font-size:26px; font-weight:750; letter-spacing:-.5px; }
+.stat .lbl { font-size:12px; color:var(--muted); margin-top:2px; }
+.stat.critical .num { color:var(--critical); }
+.stat.high .num { color:var(--high); }
+.stat.medium .num { color:var(--medium); }
+.stat.low .num { color:var(--low); }
+.stat.info .num { color:var(--info); }
+.stat.total .num { color:var(--accent); }
+
+/* ============ SCAN MODES (3-tier) ============ */
+.modes { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:8px; }
+@media (max-width:900px) { .modes { grid-template-columns:1fr; } }
+.mode {
+    border:2px solid var(--border); border-radius:var(--radius);
+    background:var(--card); padding:18px; cursor:pointer;
+    transition: var(--transition); position:relative;
+}
+.mode:hover { border-color:var(--accent); transform:translateY(-2px); }
+.mode.selected { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent), 0 6px 24px rgba(77,212,255,.14); }
+.mode .m-ico { font-size:22px; margin-bottom:8px; }
+.mode .m-title { font-weight:700; font-size:15px; margin-bottom:4px; }
+.mode .m-desc { font-size:12px; color:var(--muted); line-height:1.5; }
+.mode .m-badge {
+    display:inline-block; margin-top:10px; padding:3px 10px;
+    border-radius:12px; font-size:10.5px; font-weight:600;
+    background:var(--bg3); color:var(--muted);
+}
+.mode.selected .m-badge { background:var(--accent); color:#04121f; }
+.mode .check {
+    position:absolute; top:12px; right:12px; width:20px; height:20px; border-radius:50%;
+    border:2px solid var(--border); display:flex; align-items:center; justify-content:center;
+    font-size:11px; color:transparent;
+}
+.mode.selected .check { border-color:var(--accent); background:var(--accent); color:#04121f; }
+
+/* ============ FORM ============ */
+.form-group { margin-bottom:16px; }
+label { display:block; font-size:12.5px; font-weight:600; margin-bottom:7px; color:var(--fg); }
+input[type="text"], input[type="email"], input[type="password"], select, textarea {
+    width:100%; padding:11px 13px; border-radius:8px;
+    background:var(--bg2); border:1px solid var(--border);
+    color:var(--fg); font-size:14px; transition: var(--transition);
+}
+input:focus, select:focus, textarea:focus {
+    outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(77,212,255,.15);
+}
+.btn {
+    padding:11px 22px; border-radius:8px; border:none; font-size:14px; font-weight:600;
+    background:var(--accent); color:#04121f; transition: var(--transition);
+}
+.btn:hover { opacity:.88; transform:translateY(-1px); }
+.btn-secondary { background:var(--bg3); color:var(--fg); border:1px solid var(--border); }
+.btn-danger { background:var(--error); color:#fff; }
+.btn-success { background:var(--success); color:#03241a; }
+.btn-block { width:100%; padding:13px; font-size:15px; }
+.btn-sm { padding:6px 12px; font-size:12.5px; border-radius:6px; }
+
+/* ============ TOOL CHECKLIST ============ */
+.tool-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+@media (max-width:768px) { .tool-grid { grid-template-columns:1fr; } }
+.tool-item {
+    display:flex; align-items:center; gap:9px;
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:7px; padding:9px 11px; font-size:13px; cursor:pointer;
+    transition: var(--transition);
+}
+.tool-item:hover { border-color:var(--accent); }
+.tool-item input { width:auto; accent-color:var(--accent); }
+.tool-item .t-info { font-size:10px; color:var(--muted); display:block; }
+
+/* ============ SECTION (dynamic AI) ============ */
+.ai-section {
+    border:1px dashed var(--accent); border-radius:var(--radius);
+    padding:16px; margin-bottom:16px; background:rgba(77,212,255,.03);
+}
+.ai-section .title { font-size:13px; font-weight:650; margin-bottom:12px; color:var(--accent); }
+
+/* ============ STATUS / BADGES ============ */
+.badge {
+    display:inline-block; padding:4px 12px; border-radius:14px;
+    font-size:11px; font-weight:700; letter-spacing:.3px;
+}
+.badge.pending { background:rgba(255,180,71,.14); color:var(--warning); }
+.badge.running { background:rgba(74,168,255,.14); color:var(--info); }
+.badge.completed { background:rgba(47,230,165,.14); color:var(--success); }
+.badge.failed { background:rgba(255,93,122,.14); color:var(--error); }
+.sev { display:inline-block; padding:2px 9px; border-radius:10px; font-size:10.5px; font-weight:700; }
+.sev.critical { background:rgba(255,59,92,.15); color:var(--critical); }
+.sev.high { background:rgba(255,122,59,.15); color:var(--high); }
+.sev.medium { background:rgba(255,200,74,.15); color:var(--medium); }
+.sev.low { background:rgba(82,210,115,.15); color:var(--low); }
+.sev.info { background:rgba(74,168,255,.15); color:var(--info); }
+
+/* ============ RESULT ITEMS ============ */
+.result-item {
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:8px; padding:14px 16px; margin-bottom:10px;
+}
+.result-item .r-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.result-item .r-tool { font-weight:650; font-size:14px; }
+.result-item pre {
+    background:var(--bg3); border-radius:6px; padding:10px 12px;
+    font-size:12px; overflow-x:auto; max-height:220px; overflow-y:auto;
+    margin-top:8px; color:var(--fg);
+}
+.r-meta { font-size:11.5px; color:var(--muted); }
+
+/* ============ AI TIMELINE ============ */
+.ai-timeline { position:relative; padding-left:26px; }
+.ai-timeline::before {
+    content:''; position:absolute; left:8px; top:6px; bottom:6px; width:2px;
+    background:var(--border);
+}
+.ai-node { position:relative; margin-bottom:16px; }
+.ai-node::before {
+    content:''; position:absolute; left:-24px; top:4px; width:12px; height:12px;
+    border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px var(--bg);
+}
+.ai-node .n-phase { font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:8px; }
+.ai-node .n-conf {
+    font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;
+    background:var(--bg3); color:var(--muted);
+}
+.ai-node .n-conf.hi { color:var(--success); }
+.ai-node .n-conf.lo { color:var(--warning); }
+.ai-node .n-analysis { font-size:13px; margin-top:5px; color:var(--fg); }
+.ai-node .n-reason { font-size:12px; color:var(--muted); margin-top:3px; }
+.ai-node .n-tools { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+.ai-node .n-tool {
+    font-size:11px; padding:3px 10px; border-radius:12px;
+    background:var(--bg3); border:1px solid var(--border);
+}
+.ai-node .n-stop { color:var(--error); font-size:12px; font-weight:600; margin-top:4px; }
+
+/* ============ REPORT ============ */
+.report-banner {
+    background:linear-gradient(135deg, rgba(77,212,255,.08), rgba(124,92,255,.08));
+    border:1px solid var(--border); border-radius:var(--radius);
+    padding:26px; text-align:center; margin-bottom:20px;
+}
+.report-banner .rb-title { font-size:22px; font-weight:750; }
+.report-banner .rb-meta { color:var(--muted); font-size:13px; margin-top:6px; }
+.risk-gauge { margin:18px auto 0; max-width:260px; }
+.risk-bar { height:12px; border-radius:8px; background:var(--bg3); overflow:hidden; }
+.risk-bar .fill { height:100%; border-radius:8px; background:linear-gradient(90deg,var(--success),var(--warning),var(--critical)); }
+.risk-label { margin-top:8px; font-size:13px; font-weight:700; }
+.markdown {
+    font-size:14px; line-height:1.65;
+}
+.markdown h1, .markdown h2, .markdown h3 { margin:18px 0 8px; }
+.markdown h2 { font-size:17px; }
+.markdown h3 { font-size:15px; color:var(--accent); }
+.markdown table { width:100%; border-collapse:collapse; margin:12px 0; font-size:13px; }
+.markdown th, .markdown td { border:1px solid var(--border); padding:8px 12px; text-align:left; }
+.markdown th { background:var(--bg3); }
+.markdown code { background:var(--bg3); padding:2px 6px; border-radius:4px; font-size:12.5px; }
+.markdown pre { background:var(--bg3); padding:12px; border-radius:8px; overflow-x:auto; font-size:12.5px; }
+.markdown ul, .markdown ol { padding-left:20px; margin:8px 0; }
+
+/* ============ TABLES ============ */
+table.data { width:100%; border-collapse:collapse; font-size:13px; }
+table.data th {
+    text-align:left; padding:10px 12px; font-size:11px; text-transform:uppercase;
+    letter-spacing:.5px; color:var(--muted); border-bottom:1px solid var(--border);
+}
+table.data td { padding:11px 12px; border-bottom:1px solid var(--border); }
+
+/* ============ LOGS ============ */
+.log-entry {
+    font-family:'SF Mono', 'JetBrains Mono', monospace; font-size:12px;
+    padding:7px 10px; border-left:3px solid var(--border);
+    background:var(--bg2); margin-bottom:6px; border-radius:0 6px 6px 0;
+    color:var(--muted);
+}
+.log-entry.success { border-left-color:var(--success); color:var(--fg); }
+.log-entry.error { border-left-color:var(--error); }
+.log-entry.warning { border-left-color:var(--warning); }
+.log-entry.info { border-left-color:var(--info); }
+#logsList { max-height:480px; overflow-y:auto; }
+
+/* ============ NOTIFICATION ============ */
+.toast {
+    position:fixed; top:20px; right:20px; z-index:99;
+    background:var(--card); border:1px solid var(--border);
+    border-left:4px solid var(--accent); padding:13px 18px;
+    border-radius:8px; box-shadow:var(--shadow); font-size:13.5px;
+    transform:translateX(120%); transition:var(--transition);
+}
+.toast.show { transform:translateX(0); }
+.toast.success { border-left-color:var(--success); }
+.toast.error { border-left-color:var(--error); }
+
+/* ============ SCAN HISTORY ============ */
+.scan-row { display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:8px; cursor:pointer; transition:var(--transition); }
+.scan-row:hover { background:var(--bg3); }
+.scan-row .sr-target { font-weight:650; font-size:14px; flex:1; }
+.scan-row .sr-meta { font-size:11.5px; color:var(--muted); }
+.scan-row .sr-type {
+    font-size:10.5px; padding:3px 9px; border-radius:10px;
+    background:var(--bg3); border:1px solid var(--border); color:var(--muted);
+}
+.scan-row .sr-type.ai { color:var(--accent); border-color:var(--accent); }
+
+/* ============ EMPTY STATE ============ */
+.empty { text-align:center; padding:44px 20px; color:var(--muted); }
+.empty .e-ico { font-size:40px; margin-bottom:10px; opacity:.6; }
+.empty .e-title { font-weight:650; font-size:15px; color:var(--fg); margin-bottom:4px; }
+
+/* ============ PRINT ============ */
+@media print {
+    .sidebar, .topbar, .nav-item, .report-actions, .toast, .btn-theme, .chip { display:none !important; }
+    .app { display:block; }
+    .main { padding:0; max-width:100%; }
+    body { background:#fff; color:#000; }
+    * { background:#fff !important; color:#000 !important; border-color:#ccc !important; box-shadow:none !important; }
+    .markdown table th { background:#f0f0f0 !important; }
+    .badge, .sev { border:1px solid #999 !important; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="logo">☠</div>
+            <div>
+                <div class="name">ujiscan</div>
+                <div class="tag">Agentic Pentest Platform</div>
+            </div>
+        </div>
+        <button class="nav-item active" data-panel="dashboard" onclick="go('dashboard')">
+            <span class="ico">📊</span> Dashboard
+        </button>
+        <button class="nav-item" data-panel="scan" onclick="go('scan')">
+            <span class="ico">🎯</span> New Scan
+        </button>
+        <button class="nav-item" data-panel="report" onclick="go('report')">
+            <span class="ico">📄</span> Report
+        </button>
+        <button class="nav-item" data-panel="findings" onclick="go('findings')">
+            <span class="ico">⚠️</span> Findings
+        </button>
+        <button class="nav-item" data-panel="ai" onclick="go('ai')">
+            <span class="ico">🧠</span> AI Decisions
+        </button>
+        <button class="nav-item" data-panel="tools" onclick="go('tools')">
+            <span class="ico">🧰</span> Tool Catalog
+        </button>
+        <button class="nav-item" data-panel="logs" onclick="go('logs')">
+            <span class="ico">📜</span> Logs
+        </button>
+        <div class="spacer"></div>
+        <button class="nav-item" onclick="handleLogout()">
+            <span class="ico">🚪</span> Logout
+        </button>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+
+        <div class="topbar">
+            <div>
+                <h1 id="pageTitle">Dashboard</h1>
+                <div class="sub" id="pageSub">Ringkasan aktivitas scanning</div>
+            </div>
+            <div class="topbar-right">
+                <span class="chip" id="userChip" style="display:none;"><span class="dot"></span> <span id="userName">admin</span></span>
+                <button class="btn-theme" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+            </div>
+        </div>
+
+        <!-- ============ LOGIN ============ -->
+        <div id="view-login">
+            <div style="max-width:420px; margin:60px auto;">
+                <div class="card">
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <div style="font-size:40px; margin-bottom:6px;">☠️</div>
+                        <h2 style="justify-content:center;">Masuk ke ujiscan</h2>
+                        <p style="color:var(--muted); font-size:13px;">Agentic Penetration Testing Platform</p>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="loginEmail" value="admin@ujiscan.local">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword">
+                    </div>
+                    <button class="btn btn-block" onclick="handleLogin()">Sign In</button>
+                    <p style="text-align:center; font-size:12px; color:var(--muted); margin-top:14px;">
+                        Akses diberikan oleh administrator. Ganti password default setelah login pertama.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ DASHBOARD ============ -->
+        <div id="view-dashboard" class="hidden">
+            <div class="grid-3" style="margin-bottom:18px;">
+                <div class="stat total"><div class="num" id="dTotal">0</div><div class="lbl">Total Scans</div></div>
+                <div class="stat info"><div class="num" id="dRunning">0</div><div class="lbl">Active / Running</div></div>
+                <div class="stat low"><div class="num" id="dCompleted">0</div><div class="lbl">Completed</div></div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <h2>Scan Terakhir</h2>
+                    <div id="dRecent"></div>
+                </div>
+                <div class="card">
+                    <h2>Mode Scan <span class="hint">3-tier filosofi</span></h2>
+                    <div style="font-size:13px; line-height:1.7;">
+                        <p>📋 <strong>Reguler</strong> — semua 9 tools hostedscan, laporan lengkap (≈2 jam)</p>
+                        <p style="margin-top:8px;">⚡ <strong>Quick</strong> — pilih tools bebas via checklist (≈5-20 mnt)</p>
+                        <p style="margin-top:8px;">🤖 <strong>Full Scan AI</strong> — 100% AI agent, DeepSeek/OpenAI/Claude,
+                        pilih tools dari katalog ratusan (≈15 mnt - 4 jam)</p>
+                        <button class="btn btn-sm" style="margin-top:14px;" onclick="go('scan')">+ Mulai Scan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ NEW SCAN ============ -->
+        <div id="view-scan" class="hidden">
+            <div class="card">
+                <h2>🎯 New Scan</h2>
+                <div class="form-group">
+                    <label>Target (domain / IP / URL / CIDR)</label>
+                    <input type="text" id="target" placeholder="example.com" value="example.com">
+                </div>
+                <label>Pilih Mode Scan</label>
+                <div class="modes" style="margin-bottom:20px;">
+                    <div class="mode selected" data-mode="regular" onclick="selectMode('regular')">
+                        <span class="check">✓</span>
+                        <div class="m-ico">📋</div>
+                        <div class="m-title">Reguler Scan</div>
+                        <div class="m-desc">Semua 9 tools utama hostedscan berjalan urut. Laporan lengkap ala hostedscan.</div>
+                        <div><span class="m-badge">9 tools · ~2 jam</span></div>
+                    </div>
+                    <div class="mode" data-mode="quick" onclick="selectMode('quick')">
+                        <span class="check">✓</span>
+                        <div class="m-ico">⚡</div>
+                        <div class="m-title">Quick Scan</div>
+                        <div class="m-desc">Pilih tools bebas (checklist) dari daftar tools reguler. Cepat &amp; hemat.</div>
+                        <div><span class="m-badge">pilih sendiri · 5-20 mnt</span></div>
+                    </div>
+                    <div class="mode" data-mode="full" onclick="selectMode('full')">
+                        <span class="check">✓</span>
+                        <div class="m-ico">🤖</div>
+                        <div class="m-title">Full Scan AI</div>
+                        <div class="m-desc">100% dijalankan AI agent. AI pilih tools dari katalog sesuai target. Engine: DeepSeek / OpenAI / Claude.</div>
+                        <div><span class="m-badge">AI agent · 15 mnt - 4 jam</span></div>
+                    </div>
+                </div>
+
+                <div id="quickSection" class="ai-section hidden">
+                    <div class="title">⚡ Pilih Tools (checklist bebas)</div>
+                    <div class="tool-grid" id="quickToolsList"></div>
+                </div>
+
+                <div id="fullSection" class="ai-section hidden">
+                    <div class="title">🤖 Konfigurasi AI Agent</div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>AI Engine</label>
+                            <select id="aiEngine">
+                                <option value="deepseek">DeepSeek Flash</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="claude">Claude</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Objective / Instruksi (opsional)</label>
+                            <input type="text" id="aiObjective" placeholder="Comprehensive web application security assessment">
+                        </div>
+                    </div>
+                    <p style="font-size:12px; color:var(--muted);">
+                        💡 AI agent menilai target lalu memilih tools dari katalog (tidak perlu diinstall lokal). Keputusan AI
+                        tiap fase (confidence, reasoning) akan tampil di tab <strong>AI Decisions</strong> &amp; <strong>Report</strong>.
+                    </p>
+                </div>
+
+                <button class="btn btn-block" onclick="startScan()" style="font-size:15px;">▶ Start Scan</button>
+            </div>
+
+            <div class="card">
+                <h2>Scan Status</h2>
+                <div id="scanStatus"><div class="empty"><div class="e-ico">🎯</div><div class="e-title">Belum ada scan</div><p>Pilih mode &amp; target, lalu Start Scan.</p></div></div>
+            </div>
+
+            <div class="card">
+                <h2>Live Results</h2>
+                <div id="scanResults"><div class="empty"><div class="e-ico">📡</div><p>Hasil tool muncul real-time di sini.</p></div></div>
+            </div>
+        </div>
+
+        <!-- ============ REPORT ============ -->
+        <div id="view-report" class="hidden">
+            <div class="card">
+                <div id="reportContent">
+                    <div class="empty"><div class="e-ico">📄</div><div class="e-title">Belum ada laporan</div><p>Jalankan scan dulu — laporan otomatis dibuat setelah selesai.</p></div>
+                </div>
+                <div class="report-actions" id="reportActions" style="display:none; gap:10px; margin-bottom:14px; display:flex;">
+                    <button class="btn btn-success" onclick="window.print()">🖨️ Print / Save PDF</button>
+                    <button class="btn btn-secondary" onclick="exportReport()">⬇️ Export HTML</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ FINDINGS ============ -->
+        <div id="view-findings" class="hidden">
+            <div class="grid-3" style="margin-bottom:18px;">
+                <div class="stat critical"><div class="num" id="fCrit">0</div><div class="lbl">Critical</div></div>
+                <div class="stat high"><div class="num" id="fHigh">0</div><div class="lbl">High</div></div>
+                <div class="stat medium"><div class="num" id="fMed">0</div><div class="lbl">Medium</div></div>
+            </div>
+            <div class="card"><h2>Findings List</h2><div id="findingsList"><div class="empty">Belum ada findings.</div></div></div>
+        </div>
+
+        <!-- ============ AI DECISIONS ============ -->
+        <div id="view-ai" class="hidden">
+            <div class="card">
+                <h2>🧠 AI Reasoning — Full Scan</h2>
+                <p style="font-size:13px; color:var(--muted); margin-bottom:18px;">
+                    Keputusan AI agent tiap fase: tools dipilih, analisis hasil, confidence, dan keputusan lanjut/stop.
+                    Ini "otak" yang berasal dari file .md rahasia (agents/), bukan dari LLM.
+                </p>
+                <div id="aiTimeline"></div>
+            </div>
+        </div>
+
+        <!-- ============ TOOLS ============ -->
+        <div id="view-tools" class="hidden">
+            <div class="card">
+                <h2>🧰 Tool Catalog</h2>
+                <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+                    Katalog tools untuk Full Scan AI (dari <code>agents/tools-catalog.json</code>).
+                    AI memilih dari sini — tidak semua perlu diinstall lokal.
+                </p>
+                <div id="toolsList"><div class="empty">Loading…</div></div>
+            </div>
+        </div>
+
+        <!-- ============ LOGS ============ -->
+        <div id="view-logs" class="hidden">
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                    <h2 style="margin:0;">📜 Execution Log</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="clearLogs()">Clear</button>
+                </div>
+                <div id="logsList"><div class="log-entry info">ujiscan siap.</div></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ============================================================================
+// CONFIG
+// ============================================================================
+const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+const API_BASE = isLocalhost ? 'http://localhost:8081' : 'https://representatives-equal-batman-maximize.trycloudflare.com';
+
+const TOOLS = ['dig','subfinder','nmap','httpx','whatweb','sslscan','nuclei','gobuster','nikto'];
+const CORES = { dig:'DNS lookup', subfinder:'Subdomain', nmap:'Port scan', httpx:'HTTP probe',
+  whatweb:'Web tech', sslscan:'SSL/TLS', nuclei:'Vuln template', gobuster:'Dir brute', nikto:'Web server' };
+
+let authToken = localStorage.getItem('ujiscan_token') || null;
+let currentMode = 'regular';
+let latestScan = null;
+let scanHistory = [];
+let logs = [];
+
+// ============================================================================
+// THEME (dark default — aturan)
+// ============================================================================
+function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); }
+function toggleTheme(){
+    const cur = document.documentElement.getAttribute('data-theme');
+    const next = cur === 'dark' ? 'light' : 'dark';
+    applyTheme(next); localStorage.setItem('ujiscan_theme', next);
+}
+(function(){
+    const saved = localStorage.getItem('ujiscan_theme');
+    applyTheme(saved === 'light' ? 'light' : 'dark');
+})();
+
+// ============================================================================
+// NAV
+// ============================================================================
+const TITLES = {
+    dashboard:['Dashboard','Ringkasan aktivitas scanning'],
+    scan:['New Scan','Mulai scan baru (3 mode)'],
+    report:['Report','Laporan hasil scan — print / save PDF'],
+    findings:['Findings','Temuan kerentanan terverifikasi'],
+    ai:['AI Decisions','Reasoning AI agent per fase'],
+    tools:['Tool Catalog','Katalog tools untuk Full Scan AI'],
+    logs:['Logs','Riwayat eksekusi'],
+};
+function go(view){
+    document.querySelectorAll('.nav-item[data-panel]').forEach(n=>n.classList.toggle('active', n.dataset.panel===view));
+    ['dashboard','scan','report','findings','ai','tools','logs','login'].forEach(v=>{
+        const el = document.getElementById('view-'+v);
+        if (el) el.classList.toggle('hidden', v!==view);
+    });
+    if (TITLES[view]) { document.getElementById('pageTitle').textContent = TITLES[view][0]; document.getElementById('pageSub').textContent = TITLES[view][1]; }
+    if (view==='tools') loadTools();
+    if (view==='report') renderReport();
+    if (view==='findings') renderFindings();
+    if (view==='ai') renderAITimeline();
+    if (view==='dashboard') renderDashboard();
+}
+
+// ============================================================================
+// AUTH
+// ============================================================================
+function refreshAuthUI(){
+    const loggedIn = !!authToken;
+    document.getElementById('userChip').style.display = loggedIn ? 'flex' : 'none';
+    const loginV = document.getElementById('view-login');
+    loginV.classList.toggle('hidden', loggedIn);
+    if (loggedIn) {
+        document.querySelectorAll('.nav-item[data-panel]').forEach(n=>n.classList.remove('hidden'));
+        if (!loginV.classList.contains('hidden')) loginV.classList.add('hidden');
+    } else {
+        document.querySelectorAll('.nav-item[data-panel]').forEach(n=>n.classList.add('hidden'));
+        // Pastikan tampil VIEW LOGIN (bukan dashboard) — fix bug logout
+        go('login');
+    }
+}
+
+async function handleLogin(){
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+    try {
+        const r = await fetch(`${API_BASE}/auth/login`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({email, password})
+        });
+        const d = await r.json();
+        if (d.token) {
+            authToken = d.token;
+            localStorage.setItem('ujiscan_token', d.token);
+            localStorage.setItem('ujiscan_user', JSON.stringify({email, role:d.role}));
+            document.getElementById('userName').textContent = email;
+            refreshAuthUI();
+            toast('Login berhasil — selamat datang!', 'success');
+            loadTools();
+            loadScanHistory();
+            go('dashboard');
+        } else toast('Invalid email or password', 'error');
+    } catch(e){ toast('Login gagal: backend tidak terjangkau di '+API_BASE, 'error'); }
+}
+
+function handleLogout(){
+    authToken = null;
+    localStorage.removeItem('ujiscan_token');
+    localStorage.removeItem('ujiscan_user');
+    refreshAuthUI();
+    toast('Logged out');
+}
+
+// ============================================================================
+// SCAN MODE & TOOLS
+// ============================================================================
+function selectMode(m){
+    currentMode = m;
+    document.querySelectorAll('.mode').forEach(el=>el.classList.toggle('selected', el.dataset.mode===m));
+    document.getElementById('quickSection').classList.toggle('hidden', m!=='quick');
+    document.getElementById('fullSection').classList.toggle('hidden', m!=='full');
+    if (m==='quick' && !document.getElementById('quickToolsList').children.length) renderQuickTools();
+}
+
+function renderQuickTools(){
+    document.getElementById('quickToolsList').innerHTML = TOOLS.map(t=>`
+        <label class="tool-item">
+            <input type="checkbox" class="quick-tool" value="${t}" ${t==='nmap'?'checked':''}>
+            <span><strong>${t}</strong><span class="t-info">${CORES[t]||''}</span></span>
+        </label>`).join('');
+}
+
+// ============================================================================
+// SCAN EXECUTION
+// ============================================================================
+function startScan(){
+    const target = document.getElementById('target').value.trim();
+    if (!target) return toast('Masukkan target dulu', 'error');
+    if (!authToken) return toast('Login dulu', 'error');
+
+    let scanType, payload = { target };
+    if (currentMode==='quick') {
+        const tools = [...document.querySelectorAll('.quick-tool:checked')].map(c=>c.value);
+        if (!tools.length) return toast('Pilih minimal 1 tool', 'error');
+        scanType = 'quick'; payload.tools = tools;
+    } else if (currentMode==='full') {
+        scanType = 'full-scan-ai';
+        payload.model = document.getElementById('aiEngine').value;
+        payload.objective = document.getElementById('aiObjective').value || 'Comprehensive security assessment';
+    } else scanType = 'regular';
+    payload.scanType = scanType;
+
+    addLog(`Memulai ${scanType} scan → ${target}`, 'info');
+    toast(`Scan ${scanType} dimulai…`);
+
+    fetch(`${API_BASE}/api/scan`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+        body: JSON.stringify(payload)
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        if (d && d.id) {
+            currentScanId = d.id;
+            addLog(`Scan ID: ${d.id}`, 'success');
+            document.getElementById('scanStatus').innerHTML =
+                `<div style="display:flex; align-items:center; gap:12px;">
+                    <span class="badge running">RUNNING</span>
+                    <span style="font-size:13px;">${scanType} — ${target}</span>
+                </div><p style="margin-top:10px; font-size:13px; color:var(--muted);">Polling status…</p>`;
+            pollScanStatus();
+        } else {
+            const msg = (d && d.error) || 'Unknown error';
+            addLog('Error: '+msg, 'error');
+            document.getElementById('scanStatus').innerHTML =
+                `<span class="badge failed">FAILED</span> <p style="margin-top:8px;">${msg}</p>`;
+        }
+    })
+    .catch(e=>{ addLog('Error: '+e.message, 'error'); toast('Gagal mulai scan: '+e.message, 'error'); });
+}
+
+let currentScanId = null;
+let stopPolling = false;
+
+function pollScanStatus(){
+    if (!currentScanId || stopPolling) return;
+    fetch(`${API_BASE}/api/scan/${currentScanId}`, { headers:{'Authorization':`Bearer ${authToken}`} })
+    .then(r=>r.json())
+    .then(d=>{
+        updateScanStatus(d);
+        if (d.status==='running' || d.status==='pending') setTimeout(pollScanStatus, 1500);
+        else if (d.status==='completed') {
+            stopPolling = true;
+            latestScan = d;
+            addLog('Scan completed ✓', 'success');
+            displayResults(d);
+            renderFindings();
+            renderAITimeline();
+            renderReport();
+            loadScanHistory();
+            toast('Scan selesai — laporan siap!', 'success');
+        } else if (d.status==='failed') {
+            stopPolling = true;
+            latestScan = d;
+            addLog('Scan failed: '+(d.error||''), 'error');
+            document.getElementById('scanStatus').innerHTML =
+                `<span class="badge failed">FAILED</span>
+                 <p style="margin-top:10px; font-size:13px; color:var(--error);">${esc(d.error||'Scan gagal')}</p>
+                 <p style="margin-top:6px; font-size:12px; color:var(--muted);">${esc(d.target||'')} — cek log untuk detail.</p>`;
+            toast('Scan gagal', 'error');
+        }
+    })
+    .catch(e=>addLog('Polling error: '+e.message, 'error'));
+}
+
+function updateScanStatus(s){
+    const el = document.getElementById('scanStatus');
+    const badge = `<span class="badge ${s.status}">${s.status.toUpperCase()}</span>`;
+    const meta = s.model ? ` · AI: ${s.model}` : '';
+    el.innerHTML = `
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            ${badge}
+            <span style="font-size:14px; font-weight:600;">${s.target||''}</span>
+            <span style="font-size:12px; color:var(--muted);">${s.scan_type||''}${meta}</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px;">
+            <div class="stat"><div class="num">${s.results?s.results.length:0}</div><div class="lbl">Tool Output</div></div>
+            <div class="stat"><div class="num">${s.findings?s.findings.length:0}</div><div class="lbl">Findings</div></div>
+            <div class="stat"><div class="num">${s.ai_decisions?s.ai_decisions.length:0}</div><div class="lbl">AI Decisions</div></div>
+        </div>`;
+}
+
+function displayResults(s){
+    const el = document.getElementById('scanResults');
+    if (!s.results || !s.results.length) {
+        el.innerHTML = '<div class="empty"><p>Tidak ada tool output.</p></div>'; return;
+    }
+    const rows = s.results.map((r,i)=>`
+        <div class="result-item">
+            <div class="r-head">
+                <span class="r-tool">${r.success?'✅':'❌'} ${esc(r.tool_name)}</span>
+                <span class="r-meta">exit ${r.exit_code??'-'} · ${r.duration_ms??'-'}ms${r.phase?' · '+esc(r.phase):''}</span>
+            </div>
+            ${r.command?`<div class="r-meta" style="margin-bottom:6px;"><code>${esc(r.command)}</code></div>`:''}
+            <pre>${esc((r.stdout||'')).substring(0,2200)}</pre>
+            ${r.stderr?`<pre style="border-left:3px solid var(--error);">${esc(r.stderr).substring(0,600)}</pre>`:''}
+        </div>`).join('');
+    el.innerHTML = rows;
+}
+
+// ============================================================================
+// FINDINGS
+// ============================================================================
+function renderFindings(){
+    const arr = (latestScan && latestScan.findings) || [];
+    const c = {critical:0, high:0, medium:0, low:0, info:0};
+    arr.forEach(f=>{ const k=(f.severity||'info').toLowerCase(); if(c[k]!==undefined)c[k]++; else c.info++; });
+    document.getElementById('fCrit').textContent = c.critical;
+    document.getElementById('fHigh').textContent = c.high;
+    document.getElementById('fMed').textContent = c.medium;
+    const el = document.getElementById('findingsList');
+    if (!arr.length) { el.innerHTML = '<div class="empty">Belum ada findings terverifikasi.</div>'; return; }
+    el.innerHTML = `
+        <table class="data">
+            <thead><tr><th>Severity</th><th>Title</th><th>Tool</th><th>Deskripsi</th></tr></thead>
+            <tbody>${arr.map(f=>`
+                <tr>
+                    <td><span class="sev ${(f.severity||'info').toLowerCase()}">${(f.severity||'INFO').toUpperCase()}</span></td>
+                    <td><strong>${esc(f.title||'-')}</strong></td>
+                    <td style="color:var(--muted);">${esc(f.tool_source||f.tool||'-')}</td>
+                    <td style="font-size:12.5px;">${esc(f.description||'')}</td>
+                </tr>`).join('')}</tbody>
+        </table>`;
+}
+
+// ============================================================================
+// AI TIMELINE
+// ============================================================================
+function renderAITimeline(){
+    const el = document.getElementById('aiTimeline');
+    const decs = (latestScan && latestScan.ai_decisions) || [];
+    if (!decs.length) {
+        el.innerHTML = '<div class="empty"><div class="e-ico">🧠</div><div class="e-title">Belum ada AI decision</div><p>Jalankan Full Scan AI — keputusan per fase muncul di sini.</p></div>';
+        return;
+    }
+    el.innerHTML = '<div class="ai-timeline">'+decs.map(d=>`
+        <div class="ai-node">
+            <div class="n-phase">
+                <span>${d.phase.toUpperCase()}</span>
+                <span class="n-conf ${d.confidence>=0.7?'hi':(d.confidence>=0.4?'':'lo')}">conf ${(d.confidence*100).toFixed(0)}%</span>
+                ${d.stop_scan?'<span style="color:var(--error); font-size:11px; font-weight:700;">■ STOP</span>':''}
+            </div>
+            <div class="n-analysis">${esc(d.analysis||'')}</div>
+            ${d.reasoning?`<div class="n-reason">💡 ${esc(d.reasoning)}</div>`:''}
+            ${d.recommended_tools&&d.recommended_tools.length?`<div class="n-tools">${d.recommended_tools.map(t=>`<span class="n-tool">${esc(t)}</span>`).join('')}</div>`:''}
+        </div>`).join('')+'</div>';
+}
+
+// ============================================================================
+// REPORT (AI report + hostedscan style + print PDF)
+// ============================================================================
+function renderReport(){
+    const content = document.getElementById('reportContent');
+    const actions = document.getElementById('reportActions');
+    if (!latestScan) {
+        actions.style.display = 'none';
+        content.innerHTML = '<div class="empty"><div class="e-ico">📄</div><div class="e-title">Belum ada laporan</div><p>Scan selesai → laporan otomatis muncul di sini.</p></div>';
+        return;
+    }
+    actions.style.display = 'flex';
+
+    const s = latestScan;
+    const findings = s.findings || [];
+    const c = {critical:0,high:0,medium:0,low:0,info:0};
+    findings.forEach(f=>{ const k=(f.severity||'info').toLowerCase(); if(c[k]!==undefined)c[k]++; });
+    const total = findings.length;
+    const risk = total ? Math.min(10, Math.round((c.critical*9 + c.high*6 + c.medium*3 + c.low*1) / Math.max(1,total))) : 0;
+
+    // Parse Markdown AI report → HTML (menggunakan marked.js — robust)
+    let aiHtml = '';
+    if (s.ai_report) {
+        try {
+            const html = window.marked
+                ? marked.parse(s.ai_report)
+                : simpleMd(s.ai_report);
+            aiHtml = `<div class="markdown">${html}</div>`;
+        } catch (e) {
+            aiHtml = `<div class="markdown"><pre>${esc(s.ai_report)}</pre></div>`;
+        }
+    }
+
+    const sevHTML = total ? `
+        <div class="grid-3" style="margin-top:16px;">
+            <div class="stat critical"><div class="num">${c.critical}</div><div class="lbl">Critical</div></div>
+            <div class="stat high"><div class="num">${c.high}</div><div class="lbl">High</div></div>
+            <div class="stat medium"><div class="num">${c.medium}</div><div class="lbl">Medium</div></div>
+        </div>` : '';
+
+    const findingsTable = total ? `
+        <h3 style="margin:22px 0 10px;">Findings</h3>
+        <table class="data">
+          <thead><tr><th>Severity</th><th>Title</th><th>Tool</th><th>Bukti</th></tr></thead>
+          <tbody>${findings.map(f=>`
+            <tr><td><span class="sev ${(f.severity||'info').toLowerCase()}">${(f.severity||'INFO').toUpperCase()}</span></td>
+            <td><strong>${esc(f.title||'-')}</strong></td>
+            <td>${esc(f.tool_source||f.tool||'-')}</td>
+            <td style="font-size:12px;">${esc((f.evidence||f.description||'').substring(0,200))}</td></tr>`).join('')}</tbody>
+        </table>` : '';
+
+    const toolsTable = (s.results && s.results.length) ? `
+        <h3 style="margin:22px 0 10px;">Tool Execution</h3>
+        <table class="data">
+          <thead><tr><th>Tool</th><th>Status</th><th>Exit</th><th>Durasi</th><th>Output</th></tr></thead>
+          <tbody>${s.results.map(r=>`
+            <tr><td>${esc(r.tool_name||'-')}</td>
+            <td>${r.success?'✅':'❌'}</td>
+            <td>${r.exit_code??'-'}</td>
+            <td>${r.duration_ms??'-'}ms</td>
+            <td style="font-size:11.5px; color:var(--muted); max-width:340px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc((r.stdout||r.stderr||'').substring(0,140))}</td></tr>`).join('')}</tbody>
+        </table>` : '';
+
+    const aiDecisionsHTML = (s.ai_decisions && s.ai_decisions.length) ? `
+        <h3 style="margin:22px 0 10px;">AI Decisions (Full Scan)</h3>
+        <div class="ai-timeline">${s.ai_decisions.map(d=>`
+            <div class="ai-node">
+                <div class="n-phase"><span>${esc(d.phase).toUpperCase()}</span>
+                    <span class="n-conf">conf ${(d.confidence*100).toFixed(0)}%</span>
+                    ${d.stop_scan?'<span style="color:var(--error); font-size:11px; font-weight:700;">■ STOP</span>':''}</div>
+                <div class="n-analysis">${esc(d.analysis||'')}</div>
+                ${d.recommended_tools&&d.recommended_tools.length?`<div class="n-tools">${d.recommended_tools.map(t=>`<span class="n-tool">${esc(t)}</span>`).join('')}</div>`:''}
+            </div>`).join('')}</div>` : '';
+
+    content.innerHTML = `
+        <div class="report-banner">
+            <div class="rb-title">📄 Security Scan Report — ${esc(s.target||'')}</div>
+            <div class="rb-meta">${esc(s.id||'')} · ${s.started_at?new Date(s.started_at).toLocaleString():''} · <span class="badge ${s.status}">${s.status.toUpperCase()}</span>
+            ${s.scan_type?` · ${esc(s.scan_type)}`:''}${s.model?` · AI: ${esc(s.model)}`:''}</div>
+            <div class="risk-gauge">
+                <div class="risk-bar"><div class="fill" style="width:${Math.max(3,risk*10)}%"></div></div>
+                <div class="risk-label">Risk Score: ${risk}/10 ${risk>=7?'— HIGH':risk>=4?'— MEDIUM':risk>=1?'— LOW':'— CLEAN'}</div>
+            </div>
+        </div>
+        ${aiHtml}
+        ${sevHTML}
+        ${findingsTable}
+        ${aiDecisionsHTML}
+        ${toolsTable}
+    `;
+}
+
+function inline(t){ return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>'); }
+
+// Fallback markdown sederhana (jika CDN marked gagal load)
+function simpleMd(text){
+    let h = esc(text)
+        .replace(/^### (.*)$/gm, '<h4>$1</h4>')
+        .replace(/^## (.*)$/gm, '<h3>$1</h3>')
+        .replace(/^# (.*)$/gm, '<h2>$1</h2>')
+        .replace(/^\|(.*)\|$/gm, (m)=>{ const cells=m.slice(1,-1).split('|').map(x=>x.trim()); return '<tr>'+cells.map(x=>x.startsWith('-')?'<th></th>':'<td>'+inline(x)+'</td>').join('')+'</tr>'; })
+        .replace(/^- \*\*(.*?):\*\* (.*)$/gm, '<li><strong>$1:</strong> $2</li>')
+        .replace(/^- (.*)$/gm, '<li>$1</li>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\n\n/g, '\n');
+    return h;
+}
+
+// ============================================================================
+// SCAN HISTORY (GET /api/scans) — dashboard
+// ============================================================================
+function loadScanHistory(){
+    if (!authToken) return;
+    fetch(`${API_BASE}/api/scans`, { headers:{'Authorization':`Bearer ${authToken}`} })
+    .then(r=>r.json())
+    .then(list=>{
+        if (!Array.isArray(list)) return;
+        scanHistory = list;
+        renderScanHistory();
+    })
+    .catch(()=>{ /* backend belum support — abaikan */ });
+}
+
+function renderScanHistory(){
+    const el = document.getElementById('dRecent');
+    if (!scanHistory.length) {
+        el.innerHTML = '<div class="empty"><p>Belum ada scan.</p><button class="btn btn-sm" style="margin-top:10px;" onclick="go(\'scan\')">Mulai Scan</button></div>';
+        return;
+    }
+    el.innerHTML = scanHistory.slice(0,6).map(s=>`
+        <div class="scan-row" onclick="viewScan('${s.id}')">
+            <span class="badge ${s.status}">${s.status.toUpperCase()}</span>
+            <span class="sr-target">${esc(s.target)}</span>
+            <span class="sr-type ${s.scan_type==='full-scan-ai'?'ai':''}">${esc(s.scan_type||'')}${s.model?' · '+esc(s.model):''}</span>
+            <span class="sr-meta">${s.findings?s.findings.length:0} findings · ${s.results?s.results.length:0} outputs</span>
+        </div>`).join('') || '<div class="empty">Belum ada scan.</div>';
+}
+
+function viewScan(id){
+    fetch(`${API_BASE}/api/scan/${id}`, { headers:{'Authorization':`Bearer ${authToken}`} })
+    .then(r=>r.json())
+    .then(data=>{
+        latestScan = data;
+        renderReport(); renderFindings(); renderAITimeline(); displayResults(data); updateScanStatus(data);
+        go('report');
+    })
+    .catch(e=>toast('Gagal load scan: '+e.message, 'error'));
+}
+
+function exportReport(){
+    const html = document.getElementById('reportContent').innerHTML;
+    const full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ujiscan Report</title>
+    <style>body{font-family:sans-serif;margin:40px;color:#222;line-height:1.6}
+    table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #ccc;padding:8px;text-align:left}th{background:#eee}
+    h2{color:#0366d6}</style></head><body>${html}</body></html>`;
+    const blob = new Blob([full], {type:'text/html'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `ujiscan-report-${latestScan?latestScan.target:'scan'}.html`;
+    a.click();
+    toast('Report di-export!');
+}
+
+// ============================================================================
+// TOOLS CATALOG
+// ============================================================================
+function loadTools(){
+    const el = document.getElementById('toolsList');
+    if (!authToken) { el.innerHTML = '<div class="empty">Login untuk melihat katalog.</div>'; return; }
+    fetch(`${API_BASE}/api/tools`, { headers:{'Authorization':`Bearer ${authToken}`} })
+    .then(r=>r.json())
+    .then(d=>{
+        if (!Array.isArray(d)) throw new Error('bad response');
+        el.innerHTML = `<div class="grid-2">${d.map(t=>`
+            <div class="card" style="padding:16px; margin:0;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong style="font-size:14px;">${esc(t.name)}</strong>
+                    <span class="sev ${t.available?'low':'info'}">${t.available?'● lokal':'○ katalog'}</span>
+                </div>
+                <p style="font-size:12.5px; color:var(--muted); margin-top:6px;">${esc(t.description||'')}</p>
+            </div>`).join('')}</div>`;
+    })
+    .catch(e=>el.innerHTML = `<div class="empty" style="color:var(--error);">Error: ${esc(e.message)}</div>`);
+}
+
+// ============================================================================
+// DASHBOARD
+// ============================================================================
+function renderDashboard(){
+    const rec = document.getElementById('dRecent');
+    if (scanHistory.length) { renderScanHistory(); return; }
+    if (!latestScan) { rec.innerHTML = '<div class="empty"><p>Belum ada scan.</p><button class="btn btn-sm" style="margin-top:10px;" onclick="go(\'scan\')">Mulai Scan</button></div>'; return; }
+    const s = latestScan;
+    rec.innerHTML = `<div class="scan-row" onclick="go('report')">
+        <span class="badge ${s.status}">${s.status.toUpperCase()}</span>
+        <span class="sr-target">${esc(s.target)}</span>
+        <span class="sr-type ${s.scan_type==='full-scan-ai'?'ai':''}">${esc(s.scan_type||'')}${s.model?' · '+esc(s.model):''}</span>
+        <span class="sr-meta">${s.findings?s.findings.length:0} findings · ${s.results?s.results.length:0} outputs</span>
+    </div>`;
+    if (authToken) loadScanHistory();
+}
+
+// ============================================================================
+// LOGS & TOAST
+// ============================================================================
+function addLog(msg, type='info'){
+    logs.unshift({msg,type,time:new Date().toLocaleTimeString()});
+    const el = document.getElementById('logsList');
+    if (el) {
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        el.prepend(entry);
+    }
+}
+function clearLogs(){ document.getElementById('logsList').innerHTML=''; logs=[]; }
+
+let toastTimer;
+function toast(msg, type='info'){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = `toast ${type}`;
+    requestAnimationFrame(()=>el.classList.add('show'));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>el.classList.remove('show'), 3200);
+}
+
+function esc(t){
+    if (t===null||t===undefined) return '';
+    return String(t).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ============================================================================
+// INIT
+// ============================================================================
+document.addEventListener('DOMContentLoaded', ()=>{
+    refreshAuthUI();
+    renderQuickTools();
+    addLog('ujiscan frontend siap — '+(isLocalhost?'localhost':'github pages'), 'info');
+    if (authToken) { loadTools(); loadScanHistory(); go('dashboard'); }
+    else go('login');
+});
+</script>
+</body>
+</html>

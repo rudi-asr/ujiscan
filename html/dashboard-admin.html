@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ujiscan - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0e27;
+            --fg: #e0e0e0;
+            --bg-secondary: #1a1f3a;
+            --border: #333;
+            --accent: #00d4ff;
+            --success: #00ff88;
+            --error: #ff3333;
+        }
+
+        html[data-theme="dark"] {
+            --bg: #0a0e27;
+            --fg: #e0e0e0;
+            --bg-secondary: #1a1f3a;
+            --border: #333;
+            --accent: #00d4ff;
+        }
+
+        html[data-theme="light"] {
+            --bg: #ffffff;
+            --fg: #000000;
+            --bg-secondary: #f5f5f5;
+            --border: #cccccc;
+            --accent: #0066ff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--fg);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .navbar {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+        }
+
+        .navbar-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--accent);
+            margin: 0;
+        }
+
+        .navbar-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-badge {
+            background-color: var(--border);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .logout-btn {
+            background-color: var(--error);
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .logout-btn:hover {
+            background-color: #cc0000;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2em;
+            color: var(--fg);
+        }
+
+        .theme-toggle:hover {
+            color: var(--accent);
+        }
+
+        .container-dashboard {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            color: var(--fg);
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .admin-tab {
+            padding: 1rem;
+            border: none;
+            background: none;
+            color: #999;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .admin-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section h2 {
+            font-size: 1.3em;
+            margin-bottom: 1rem;
+            color: var(--fg);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th {
+            background-color: var(--bg);
+            border-bottom: 2px solid var(--border);
+            padding: 1rem;
+            text-align: left;
+            color: #999;
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .table td {
+            border-bottom: 1px solid var(--border);
+            padding: 1rem;
+            color: var(--fg);
+        }
+
+        .table tbody tr:hover {
+            background-color: rgba(0, 212, 255, 0.05);
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+            background-color: rgba(0, 212, 255, 0.2);
+            color: var(--accent);
+        }
+
+        .action-badge {
+            display: inline-block;
+            padding: 0.3rem 0.7rem;
+            border-radius: 3px;
+            font-size: 0.8em;
+            background-color: var(--border);
+            color: #aaa;
+        }
+
+        .audit-log {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .audit-log:last-child {
+            border-bottom: none;
+        }
+
+        .audit-user {
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .audit-time {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .health-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .health-indicator.ok {
+            background-color: var(--success);
+        }
+
+        .health-indicator.warning {
+            background-color: #ffc107;
+        }
+
+        .health-indicator.error {
+            background-color: var(--error);
+        }
+
+        .metric-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .metric-item {
+            background-color: var(--bg);
+            padding: 1rem;
+            border-radius: 4px;
+            border-left: 3px solid var(--accent);
+        }
+
+        .metric-label {
+            color: #999;
+            font-size: 0.9em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <div>
+                <h1 class="navbar-title">☠️ ujiscan</h1>
+            </div>
+            <div class="navbar-user">
+                <span class="user-badge" id="userBadge">Loading...</span>
+                <button class="theme-toggle" onclick="theme.toggle()" title="Toggle theme">
+                    <span id="themeIcon">🌙</span>
+                </button>
+                <button class="logout-btn" onclick="auth.logout()">Logout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-dashboard">
+        <h2 class="page-title">Admin Dashboard</h2>
+
+        <!-- Tabs -->
+        <div class="admin-tabs">
+            <button class="admin-tab active" onclick="switchTab('health')">System Health</button>
+            <button class="admin-tab" onclick="switchTab('users')">User Management</button>
+            <button class="admin-tab" onclick="switchTab('audit')">Audit Logs</button>
+        </div>
+
+        <!-- Health Tab -->
+        <div id="health-tab" class="tab-content active">
+            <div class="section">
+                <h2>System Health</h2>
+                <div class="metric-row" id="healthMetrics">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>Service Status</h2>
+                <div id="serviceStatus"></div>
+            </div>
+        </div>
+
+        <!-- Users Tab -->
+        <div id="users-tab" class="tab-content">
+            <div class="section">
+                <h2>Users</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersList">
+                        <tr><td colspan="4" class="empty-state">No users found</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Audit Tab -->
+        <div id="audit-tab" class="tab-content">
+            <div class="section">
+                <h2>Recent Audit Logs</h2>
+                <div id="auditLogs" class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading logs...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../app.js"></script>
+    <script>
+        // Page initialization
+        async function initPage() {
+            updateThemeIcon();
+            const observer = new MutationObserver(updateThemeIcon);
+            observer.observe(document.documentElement, { attributes: true });
+
+            // Check admin role
+            const user = auth.getUser();
+            if (user) {
+                document.getElementById('userBadge').textContent = `${user.email} (${user.role})`;
+                if (user.role !== 'admin') {
+                    alert('Access denied: Admin role required');
+                    window.location.href = 'dashboard-team.html';
+                    return;
+                }
+            }
+
+            // Load dashboard data
+            await loadDashboard();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.getElementById('themeIcon');
+            icon.textContent = theme.current() === 'dark' ? '☀️' : '🌙';
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Deactivate all tab buttons
+            document.querySelectorAll('.admin-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        async function loadDashboard() {
+            try {
+                // Load admin dashboard data
+                const dashData = await api.getDashboardAdmin();
+                
+                // Load health metrics
+                loadHealthMetrics(dashData);
+
+                // Load users
+                loadUsers(dashData);
+
+                // Load audit logs
+                loadAuditLogs(dashData);
+            } catch (err) {
+                console.error('Error loading dashboard:', err);
+            }
+        }
+
+        function loadHealthMetrics(data) {
+            const metrics = document.getElementById('healthMetrics');
+            const health = data.systemHealth || {};
+
+            metrics.innerHTML = `
+                <div class="metric-item">
+                    <div class="metric-label">API Status</div>
+                    <div class="metric-value">
+                        <span class="health-indicator ok"></span>
+                        ${health.apiStatus || 'OK'}
+                    </div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Database</div>
+                    <div class="metric-value">
+                        <span class="health-indicator ${health.databaseStatus === 'OK' ? 'ok' : 'error'}"></span>
+                        ${health.databaseStatus || 'Connected'}
+                    </div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Total Users</div>
+                    <div class="metric-value">${health.totalUsers || 0}</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Active Sessions</div>
+                    <div class="metric-value">${health.activeSessions || 0}</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Total Engagements</div>
+                    <div class="metric-value">${health.totalEngagements || 0}</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-label">Audit Events</div>
+                    <div class="metric-value">${health.auditEventCount || 0}</div>
+                </div>
+            `;
+
+            const serviceStatus = document.getElementById('serviceStatus');
+            serviceStatus.innerHTML = `
+                <div style="padding: 1rem; background-color: var(--bg); border-radius: 4px;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <span class="health-indicator ok"></span>
+                        <strong>ujiscan API</strong> - Running normally
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <span class="health-indicator ok"></span>
+                        <strong>SQLite Database</strong> - Connected
+                    </div>
+                    <div>
+                        <span class="health-indicator ok"></span>
+                        <strong>Audit Logging</strong> - Active
+                    </div>
+                </div>
+            `;
+        }
+
+        function loadUsers(data) {
+            const tbody = document.getElementById('usersList');
+            const users = data.users || [];
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr>
+                    <td>${user.email}</td>
+                    <td><span class="role-badge">${user.role || 'user'}</span></td>
+                    <td>
+                        <span style="color: var(--success);">●</span>
+                        Active
+                    </td>
+                    <td>${user.createdAt ? formatDate(user.createdAt) : 'N/A'}</td>
+                </tr>
+            `).join('');
+        }
+
+        function loadAuditLogs(data) {
+            const container = document.getElementById('auditLogs');
+            const logs = data.auditLogs || [];
+
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="empty-state">No audit logs found</div>';
+                return;
+            }
+
+            container.innerHTML = logs.slice(0, 50).map(log => `
+                <div class="audit-log">
+                    <div>
+                        <div class="audit-user">${log.user || 'System'}</div>
+                        <div style="color: #999; font-size: 0.9em;">
+                            <span class="action-badge">${log.action}</span>
+                            ${log.resource || ''}
+                        </div>
+                    </div>
+                    <div class="audit-time">${formatTimeAgo(log.createdAt)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Initialize on page load
+        if (auth.isLoggedIn()) {
+            initPage();
+        } else {
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
