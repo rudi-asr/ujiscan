@@ -35,7 +35,7 @@ func NewEngine(loader *PlaybookLoader, scanStore *store.ScanStore, executor *too
 // ExecuteAgenticPlaybook runs agentic scan with AI-driven tool selection
 func (e *Engine) ExecuteAgenticPlaybook(scanID string, playbookName string, target string, objective string) error {
 	fmt.Printf("[engine] Starting agentic playbook execution: %s for %s\n", playbookName, target)
-	executor := NewAgenticExecutor(e)
+	executor := NewAgenticExecutor(e, "deepseek")
 	return executor.ExecuteAgenticScan(context.Background(), scanID, target, "full")
 }
 

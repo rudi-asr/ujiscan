@@ -64,9 +64,11 @@ func (h *Handler) HandleListTools(w http.ResponseWriter, r *http.Request) {
 
 // ScanRequest represents a scan request
 type ScanRequest struct {
-	Target   string   `json:"target"`
-	ScanType string   `json:"scanType"`   // "regular", "quick", "full-scan-ai"
-	Tools    []string `json:"tools"`      // For quick scan: user-selected tools subset
+	Target    string   `json:"target"`
+	ScanType  string   `json:"scanType"`  // "regular", "quick", "full-scan-ai"
+	Tools     []string `json:"tools"`     // For quick scan: user-selected tools subset
+	Model     string   `json:"model"`     // For full-scan-ai: "deepseek", "openai", "claude"
+	Objective string   `json:"objective"` // For full-scan-ai: AI instruction/objective
 }
 
 // ScanResponse represents a scan response
@@ -127,9 +129,17 @@ func (h *Handler) HandleStartScan(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		case "full-scan-ai":
-			// Full scan with AI orchestration
-			executor := playbook.NewAgenticExecutor(h.playbookEngine)
-			err := executor.ExecuteAgenticScan(ctx, scan.ID, req.Target, "comprehensive")
+			// Full scan with AI orchestration (provider: deepseek/openai/claude)
+			provider := strings.TrimSpace(req.Model)
+			if provider == "" {
+				provider = "deepseek" // default
+			}
+			executor := playbook.NewAgenticExecutor(h.playbookEngine, provider)
+			objective := strings.TrimSpace(req.Objective)
+			if objective == "" {
+				objective = "comprehensive"
+			}
+			err := executor.ExecuteAgenticScan(ctx, scan.ID, req.Target, objective)
 			if err != nil {
 				h.scanStore.CompleteScan(scan.ID, err)
 			}

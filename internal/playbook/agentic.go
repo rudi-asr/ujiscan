@@ -15,11 +15,11 @@ type AgenticExecutor struct {
 	aiClient *ai.Client
 }
 
-// NewAgenticExecutor creates new agentic executor
-func NewAgenticExecutor(engine *Engine) *AgenticExecutor {
+// NewAgenticExecutor creates new agentic executor with a specific AI provider
+func NewAgenticExecutor(engine *Engine, provider string) *AgenticExecutor {
 	return &AgenticExecutor{
 		engine:   engine,
-		aiClient: engine.aiClient,
+		aiClient: ai.NewClientWithProvider(provider),
 	}
 }
 

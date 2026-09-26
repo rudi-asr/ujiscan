@@ -25,7 +25,7 @@ func (c *Client) GenerateExecutiveSummary(ctx context.Context, target string, co
 		target, counts["critical"], counts["high"], counts["medium"], counts["low"], counts["info"],
 	)
 
-	resp, err := c.callOpenAIRaw(ctx, prompt)
+	resp, err := c.callProviderRaw(ctx, prompt)
 	if err != nil || strings.TrimSpace(resp) == "" {
 		// AI unavailable — keep deterministic fallback
 		return fallback, nil

@@ -1,9 +1,12 @@
 package ai
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
@@ -13,8 +16,17 @@ import (
 	"github.com/rudi-asr/ujiscan/internal/models"
 )
 
-// Client handles AI-driven security analysis via OpenAI API
+// Provider display names
+var ProviderNames = map[string]string{
+	string(ProviderDeepSeek): "DeepSeek Flash",
+	string(ProviderOpenAI):   "OpenAI",
+	string(ProviderClaude):   "Claude",
+	string(ProviderOpenCode): "OpenCode Zen",
+}
+
+// Client handles AI-driven security analysis via 3 providers
 type Client struct {
+	provider string
 	apiKey   string
 	model    string
 	endpoint string
@@ -53,20 +65,66 @@ type VulnerabilityAssessment struct {
 	ToolSource  string `json:"tool_source"`
 }
 
-// NewClient creates new AI client
+// NewClient creates new AI client with default provider (deepseek)
 func NewClient() *Client {
-	apiKey := os.Getenv("OPENAI_API_KEY")
+	return NewClientWithProvider(string(ProviderDeepSeek))
+}
+
+// NewClientWithProvider creates AI client for a specific provider.
+// Supported providers: deepseek, openai, claude.
+// Falls back to deepseek for unknown providers.
+func NewClientWithProvider(provider string) *Client {
+	if provider == "" {
+		provider = string(ProviderDeepSeek)
+	}
+	if provider != string(ProviderDeepSeek) && provider != string(ProviderOpenAI) && provider != string(ProviderClaude) {
+		fmt.Printf("[ai] Unknown provider %q, falling back to %s\n", provider, ProviderDeepSeek)
+		provider = string(ProviderDeepSeek)
+	}
+
+	var apiKey, model, endpoint string
+	switch provider {
+	case string(ProviderOpenAI):
+		apiKey = os.Getenv("OPENAI_API_KEY")
+		model = "gpt-4o-mini"
+		endpoint = "https://api.openai.com/v1/chat/completions"
+	case string(ProviderClaude):
+		apiKey = os.Getenv("ANTHROPIC_API_KEY")
+		model = "claude-sonnet-4-5-20250929"
+		endpoint = "https://api.anthropic.com/v1/messages"
+	default: // deepseek
+		apiKey = os.Getenv("DEEPSEEK_API_KEY")
+		model = "deepseek-chat" // DeepSeek Flash (V3)
+		endpoint = "https://api.deepseek.com/chat/completions"
+	}
+
 	if apiKey == "" {
-		// Fallback for testing - disabled in production
-		fmt.Printf("[ai] WARNING: OPENAI_API_KEY not set, AI features disabled\n")
+		fmt.Printf("[ai] WARNING: %s API key not set (dari env %s), AI pakai mock mode\n",
+			ProviderNames[provider], envVarFor(provider))
 	}
 
 	return &Client{
+		provider: provider,
 		apiKey:   apiKey,
-		model:    "gpt-4o-mini", // Cost-effective model for security analysis
-		endpoint: "https://api.openai.com/v1/chat/completions",
+		model:    model,
+		endpoint: endpoint,
 		orgID:    os.Getenv("OPENAI_ORG_ID"),
 		feedback: make(map[string]*ToolFeedback),
+	}
+}
+
+// Provider returns the current provider name
+func (c *Client) Provider() string { return c.provider }
+
+// ProviderEnvVar returns the env var name for a provider
+func envVarFor(provider string) string {
+	switch provider {
+	case string(ProviderOpenAI):
+		return "OPENAI_API_KEY"
+	case string(ProviderClaude):
+		return "ANTHROPIC_API_KEY"
+	default:
+		return "DEEPSEEK_API_KEY"
 	}
 }
 
@@ -143,15 +201,6 @@ func (c *Client) GetPreferredTools(tools []string) []string {
 
 // AnalyzeToolOutput analyzes security tool output and returns next-step recommendations
 func (c *Client) AnalyzeToolOutput(ctx context.Context, toolName string, output string, objective string) (*AgentDecision, error) {
-	if c.apiKey == "" {
-		return &AgentDecision{
-			Analysis:         "(AI disabled - no API key)",
-			RecommendedTools: []string{},
-			Confidence:       0.0,
-			StopScan:         false,
-		}, nil
-	}
-
 	// Create prompt for AI analysis
 	prompt := fmt.Sprintf(`You are an expert penetration tester analyzing security scan results.
 
@@ -167,9 +216,9 @@ Based on this output, provide:
 4. Confidence level (0.0-1.0)
 5. Whether scan should continue or stop
 
-Respond in JSON format only.`, toolName, objective, truncateOutput(output, 2000))
+Respond in JSON format only with keys: analysis, recommended_tools, reasoning, confidence, stop_scan.`, toolName, objective, truncateOutput(output, 2000))
 
-	decision, err := c.callOpenAI(ctx, prompt)
+	decision, err := c.callProvider(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("AI analysis failed: %w", err)
 	}
@@ -179,10 +228,6 @@ Respond in JSON format only.`, toolName, objective, truncateOutput(output, 2000)
 
 // ExtractVulnerabilities extracts structured vulnerabilities from tool output
 func (c *Client) ExtractVulnerabilities(ctx context.Context, toolName string, output string) ([]VulnerabilityAssessment, error) {
-	if c.apiKey == "" {
-		return []VulnerabilityAssessment{}, nil
-	}
-
 	prompt := fmt.Sprintf(`Extract security vulnerabilities from %s output.
 Output:
 %s
@@ -197,7 +242,7 @@ For each vulnerability, provide:
 Return as JSON array. If no vulnerabilities found, return empty array.`,
 		toolName, truncateOutput(output, 2000), toolName)
 
-	resp, err := c.callOpenAIRaw(ctx, prompt)
+	resp, err := c.callProviderRaw(ctx, prompt)
 	if err != nil {
 		return nil, fmt.Errorf("vulnerability extraction failed: %w", err)
 	}
@@ -213,11 +258,6 @@ Return as JSON array. If no vulnerabilities found, return empty array.`,
 
 // SelectToolsForTarget recommends initial tools based on target characteristics
 func (c *Client) SelectToolsForTarget(ctx context.Context, target string, scanType string) ([]string, error) {
-	if c.apiKey == "" {
-		// Return default tool set
-		return defaultToolsForType(scanType), nil
-	}
-
 	prompt := fmt.Sprintf(`As a penetration tester, recommend security scanning tools for:
 Target: %s
 Scan Type: %s
@@ -232,7 +272,7 @@ Return JSON with:
 
 Optimize for efficiency - recommend 3-5 most relevant tools first.`, target, scanType)
 
-	resp, err := c.callOpenAIRaw(ctx, prompt)
+	resp, err := c.callProviderRaw(ctx, prompt)
 	if err != nil {
 		return defaultToolsForType(scanType), nil
 	}
@@ -251,9 +291,9 @@ Optimize for efficiency - recommend 3-5 most relevant tools first.`, target, sca
 
 // ---- Internal Methods ----
 
-// callOpenAI makes API call and returns structured decision
-func (c *Client) callOpenAI(ctx context.Context, prompt string) (*AgentDecision, error) {
-	resp, err := c.callOpenAIRaw(ctx, prompt)
+// callProvider makes the provider API call and returns a structured decision
+func (c *Client) callProvider(ctx context.Context, prompt string) (*AgentDecision, error) {
+	resp, err := c.callProviderRaw(ctx, prompt)
 	if err != nil {
 		return nil, err
 	}
@@ -266,16 +306,178 @@ func (c *Client) callOpenAI(ctx context.Context, prompt string) (*AgentDecision,
 	return &decision, nil
 }
 
-// callOpenAIRaw makes actual API request
-func (c *Client) callOpenAIRaw(ctx context.Context, prompt string) (string, error) {
+// callProviderRaw makes the actual provider API request.
+// Falls back to intelligent mock when API key is not configured.
+func (c *Client) callProviderRaw(ctx context.Context, prompt string) (string, error) {
 	if c.apiKey == "" {
 		// Fallback: return intelligent mock response
 		return c.mockOpenAIResponse(prompt)
 	}
 
-	// Real OpenAI API call - initialize when key available
-	// For now using mock since API key not configured
-	return c.mockOpenAIResponse(prompt)
+	switch c.provider {
+	case string(ProviderOpenAI):
+		return c.callOpenAIReal(ctx, prompt)
+	case string(ProviderClaude):
+		return c.callClaudeReal(ctx, prompt)
+	default:
+		return c.callDeepSeekReal(ctx, prompt)
+	}
+}
+
+// ---- OpenAI (https://api.openai.com/v1/chat/completions) ----
+
+type openAIMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type openAIRequest struct {
+	Model    string          `json:"model"`
+	Messages []openAIMessage `json:"messages"`
+	MaxTokens int            `json:"max_tokens,omitempty"`
+}
+
+type openAIResponse struct {
+	Choices []struct {
+		Message openAIMessage `json:"message"`
+	} `json:"choices"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+}
+
+func (c *Client) callOpenAIReal(ctx context.Context, prompt string) (string, error) {
+	reqBody := openAIRequest{
+		Model: c.model,
+		Messages: []openAIMessage{
+			{Role: "system", Content: "You are an expert penetration testing assistant. Always respond with valid JSON only."},
+			{Role: "user", Content: prompt},
+		},
+		MaxTokens: 1024,
+	}
+	return c.httpChatCall(ctx, reqBody, "Authorization")
+}
+
+// ---- DeepSeek (https://api.deepseek.com/chat/completions - OpenAI compatible) ----
+
+func (c *Client) callDeepSeekReal(ctx context.Context, prompt string) (string, error) {
+	reqBody := openAIRequest{
+		Model: c.model,
+		Messages: []openAIMessage{
+			{Role: "system", Content: "You are an expert penetration testing assistant. Always respond with valid JSON only."},
+			{Role: "user", Content: prompt},
+		},
+		MaxTokens: 1024,
+	}
+	return c.httpChatCall(ctx, reqBody, "Authorization")
+}
+
+// httpChatCall shared OpenAI-compatible endpoint call (OpenAI + DeepSeek)
+func (c *Client) httpChatCall(ctx context.Context, reqBody openAIRequest, authHeader string) (string, error) {
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set(authHeader, "Bearer "+c.apiKey)
+
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("provider request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("provider API error %d: %s", resp.StatusCode, truncateOutput(string(respBody), 300))
+	}
+
+	var apiResp openAIResponse
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return "", fmt.Errorf("failed to parse provider response: %w", err)
+	}
+	if apiResp.Error != nil {
+		return "", fmt.Errorf("provider error: %s", apiResp.Error.Message)
+	}
+	if len(apiResp.Choices) == 0 {
+		return "", fmt.Errorf("provider returned no choices")
+	}
+
+	return apiResp.Choices[0].Message.Content, nil
+}
+
+// ---- Claude (https://api.anthropic.com/v1/messages) ----
+
+type claudeRequest struct {
+	Model       string          `json:"model"`
+	MaxTokens   int             `json:"max_tokens"`
+	System      string          `json:"system"`
+	Messages    []openAIMessage `json:"messages"`
+}
+
+type claudeResponse struct {
+	Content []struct {
+		Type string `json:"type"`
+		Text string `json:"text"`
+	} `json:"content"`
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error,omitempty"`
+}
+
+func (c *Client) callClaudeReal(ctx context.Context, prompt string) (string, error) {
+	reqBody := claudeRequest{
+		Model:     c.model,
+		MaxTokens: 1024,
+		System:    "You are an expert penetration testing assistant. Always respond with valid JSON only.",
+		Messages: []openAIMessage{
+			{Role: "user", Content: prompt},
+		},
+	}
+
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return "", err
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("x-api-key", c.apiKey)
+	httpReq.Header.Set("anthropic-version", "2023-06-01")
+
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("claude request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("claude API error %d: %s", resp.StatusCode, truncateOutput(string(respBody), 300))
+	}
+
+	var apiResp claudeResponse
+	if err := json.Unmarshal(respBody, &apiResp); err != nil {
+		return "", fmt.Errorf("failed to parse claude response: %w", err)
+	}
+	if apiResp.Error != nil {
+		return "", fmt.Errorf("claude error: %s", apiResp.Error.Message)
+	}
+	if len(apiResp.Content) == 0 {
+		return "", fmt.Errorf("claude returned no content")
+	}
+
+	return apiResp.Content[0].Text, nil
 }
 
 // mockOpenAIResponse returns intelligent mock responses for testing
