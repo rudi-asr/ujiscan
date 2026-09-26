@@ -600,7 +600,7 @@ table.data td { padding:11px 12px; border-bottom:1px solid var(--border); }
 // CONFIG
 // ============================================================================
 const isLocalhost = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-const API_BASE = isLocalhost ? 'http://localhost:8081' : 'https://sacred-redhead-enables-hospitals.trycloudflare.com';
+const API_BASE = isLocalhost ? 'http://localhost:8081' : 'Binary file /tmp/ujiscan-tunnel.log matches';
 
 const TOOLS = ['dig','subfinder','nmap','httpx','whatweb','sslscan','nuclei','gobuster','nikto'];
 const CORES = { dig:'DNS lookup', subfinder:'Subdomain', nmap:'Port scan', httpx:'HTTP probe',
@@ -660,14 +660,14 @@ function refreshAuthUI(){
     document.getElementById('userChip').style.display = loggedIn ? 'flex' : 'none';
     const loginV = document.getElementById('view-login');
     loginV.classList.toggle('hidden', loggedIn);
-    if (loggedIn && loginV.classList.contains('hidden')) { /* ok */ }
-    if (!loggedIn) {
-        document.querySelectorAll('.nav-item[data-panel]').forEach(n=>n.classList.add('hidden'));
-    } else {
+    if (loggedIn) {
         document.querySelectorAll('.nav-item[data-panel]').forEach(n=>n.classList.remove('hidden'));
+        if (!loginV.classList.contains('hidden')) loginV.classList.add('hidden');
+    } else {
+        document.querySelectorAll('.nav-item[data-panel]').forEach(n=>n.classList.add('hidden'));
+        // Pastikan tampil VIEW LOGIN (bukan dashboard) — fix bug logout
+        go('login');
     }
-    if (!loggedIn) go('dashboard'); // will re-hide via login view
-    if (loggedIn && !loginV.classList.contains('hidden')) loginV.classList.add('hidden');
 }
 
 async function handleLogin(){
@@ -1126,7 +1126,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     renderQuickTools();
     addLog('ujiscan frontend siap — '+(isLocalhost?'localhost':'github pages'), 'info');
     if (authToken) { loadTools(); loadScanHistory(); go('dashboard'); }
-    else go('dashboard');
+    else go('login');
 });
 </script>
 </body>
