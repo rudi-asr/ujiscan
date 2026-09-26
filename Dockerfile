@@ -77,6 +77,9 @@ COPY web ./web
 COPY tools.yaml ./
 COPY playbooks ./playbooks
 
+# Copy agent knowledge files (.md rahasia - otak Full Scan AI)
+COPY agents ./agents
+
 # Create directory for database
 RUN mkdir -p /app/data
 

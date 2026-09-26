@@ -1,0 +1,206 @@
+{
+  "catalog_version": "1.0.0",
+  "description": "ujiscan tool catalog — katalog tools yang AI pilih untuk Full Scan. Tools bertanda local=true tersedia di container; local=false dikatalogkan (rekomendasi/panduan eksekusi remote).",
+  "tools": [
+    {
+      "tools_name": "dig",
+      "description": "DNS lookup dan enumerasi record (A, AAAA, MX, TXT, NS).",
+      "category": "recon",
+      "local": true,
+      "command": { "base": "dig", "positional": ["target"] },
+      "phase": ["recon"],
+      "tags": ["dns", "passive", "osint"],
+      "alternatives": ["dnsx", "nslookup"]
+    },
+    {
+      "tools_name": "subfinder",
+      "description": "Subdomain enumeration pasif dari sumber publik (crt.sh, dll).",
+      "category": "recon",
+      "local": true,
+      "command": { "base": "subfinder", "flags": ["-d"], "positional": [] },
+      "phase": ["recon"],
+      "tags": ["subdomain", "passive", "osint"],
+      "alternatives": ["amass", "assetfinder", "sublist3r"]
+    },
+    {
+      "tools_name": "amass",
+      "description": "Subdomain enumeration mendalam dengan OSINT + brute ringan.",
+      "category": "recon",
+      "local": false,
+      "command": { "base": "amass", "flags": ["enum", "-d"], "positional": [] },
+      "phase": ["recon"],
+      "tags": ["subdomain", "osint"],
+      "alternatives": ["subfinder"]
+    },
+    {
+      "tools_name": "nmap",
+      "description": "Port scanning, service detection, dan script vuln level dasar.",
+      "category": "enumeration",
+      "local": true,
+      "command": { "base": "nmap", "flags": ["-sV", "-sC", "-p"], "positional": ["target"] },
+      "phase": ["recon", "enumeration"],
+      "tags": ["port", "service", "network"],
+      "alternatives": ["masscan", "naabu", "rustscan"]
+    },
+    {
+      "tools_name": "masscan",
+      "description": "Port scanner ultra cepat untuk jaringan besar (harus hati-hati).",
+      "category": "enumeration",
+      "local": false,
+      "command": { "base": "masscan", "flags": ["-p", "--rate"], "positional": [] },
+      "phase": ["enumeration"],
+      "tags": ["port", "network", "fast"],
+      "alternatives": ["nmap", "naabu"]
+    },
+    {
+      "tools_name": "httpx",
+      "description": "Probing HTTP service, fingerprint server, status code, title.",
+      "category": "enumeration",
+      "local": true,
+      "command": { "base": "httpx", "flags": ["-u"], "positional": [] },
+      "phase": ["enumeration"],
+      "tags": ["http", "web", "fingerprint"],
+      "alternatives": ["curl", "feroxbuster"]
+    },
+    {
+      "tools_name": "whatweb",
+      "description": "Fingerprint teknologi web (CMS, framework, server, plugin).",
+      "category": "enumeration",
+      "local": true,
+      "command": { "base": "whatweb", "positional": ["target"] },
+      "phase": ["enumeration"],
+      "tags": ["web", "fingerprint", "tech"],
+      "alternatives": ["wappalyzer"]
+    },
+    {
+      "tools_name": "sslscan",
+      "description": "Audit SSL/TLS: cipher suites, sertifikat, protokol, kelemahan.",
+      "category": "enumeration",
+      "local": true,
+      "command": { "base": "sslscan", "positional": ["target"] },
+      "phase": ["enumeration"],
+      "tags": ["ssl", "tls", "crypto"],
+      "alternatives": ["testssl.sh", "nmap script ssl-enum-ciphers"]
+    },
+    {
+      "tools_name": "nuclei",
+      "description": "Template-based vulnerability scanner (ribuan template kerentanan).",
+      "category": "vulnscan",
+      "local": true,
+      "command": { "base": "nuclei", "flags": ["-u", "-silent"], "positional": [] },
+      "phase": ["vulnscan"],
+      "tags": ["template", "vuln", "automated"],
+      "alternatives": ["nikto"]
+    },
+    {
+      "tools_name": "nikto",
+      "description": "Web server scanner: file berbahaya, konfigurasi lama, script CGI.",
+      "category": "vulnscan",
+      "local": true,
+      "command": { "base": "nikto", "flags": ["-h"], "positional": [] },
+      "phase": ["vulnscan"],
+      "tags": ["web", "server", "misconfig"],
+      "alternatives": ["nuclei"]
+    },
+    {
+      "tools_name": "gobuster",
+      "description": "Directory/file brute-force pada web server.",
+      "category": "enumeration",
+      "local": true,
+      "command": { "base": "gobuster", "flags": ["dir", "-u", "-w"], "positional": [] },
+      "phase": ["enumeration"],
+      "tags": ["web", "brute", "directory"],
+      "alternatives": ["ffuf", "dirsearch", "feroxbuster"]
+    },
+    {
+      "tools_name": "ffuf",
+      "description": "Fuzzing web: parameter, directory, vhost — sangat cepat.",
+      "category": "enumeration",
+      "local": false,
+      "command": { "base": "ffuf", "flags": ["-u", "-w"], "positional": [] },
+      "phase": ["enumeration", "vulnscan"],
+      "tags": ["web", "fuzz", "fast"],
+      "alternatives": ["gobuster"]
+    },
+    {
+      "tools_name": "sqlmap",
+      "description": "Deteksi dan eksploitasi SQL injection (mode aman: --batch --technique=BEUSTQ).",
+      "category": "exploitation",
+      "local": false,
+      "command": { "base": "sqlmap", "flags": ["-u", "--batch"], "positional": [] },
+      "phase": ["vulnscan", "exploitation"],
+      "tags": ["sqli", "database", "exploit"],
+      "alternatives": ["sqlite3", "manual"]
+    },
+    {
+      "tools_name": "curl",
+      "description": "Request HTTP untuk verifikasi PoC non-destruktif.",
+      "category": "utility",
+      "local": true,
+      "command": { "base": "curl", "flags": ["-s", "-I", "-X"], "positional": ["url"] },
+      "phase": ["verification"],
+      "tags": ["http", "verification", "utility"],
+      "alternatives": ["wget", "httpx"]
+    },
+    {
+      "tools_name": "wafw00f",
+      "description": "Deteksi Web Application Firewall (WAF) di depan target.",
+      "category": "recon",
+      "local": false,
+      "command": { "base": "wafw00f", "positional": ["target"] },
+      "phase": ["recon"],
+      "tags": ["waf", "web", "fingerprint"],
+      "alternatives": ["manual headers"]
+    },
+    {
+      "tools_name": "theHarvester",
+      "description": "OSINT: email, subdomain, host dari mesin pencari & sumber publik.",
+      "category": "recon",
+      "local": false,
+      "command": { "base": "theHarvester", "flags": ["-d", "-b"], "positional": [] },
+      "phase": ["recon"],
+      "tags": ["osint", "email", "subdomain"],
+      "alternatives": ["subfinder", "spiderfoot"]
+    },
+    {
+      "tools_name": "dalfox",
+      "description": "Scanner XSS cepat berbasis parameter fuzzing.",
+      "category": "vulnscan",
+      "local": false,
+      "command": { "base": "dalfox", "flags": ["url"], "positional": [] },
+      "phase": ["vulnscan"],
+      "tags": ["xss", "web", "fuzz"],
+      "alternatives": ["nuclei", "manual"]
+    },
+    {
+      "tools_name": "testssl.sh",
+      "description": "Deep audit SSL/TLS: protocol, cipher, kelemahan Heartbleed dll.",
+      "category": "vulnscan",
+      "local": false,
+      "command": { "base": "testssl.sh", "positional": ["target"] },
+      "phase": ["vulnscan"],
+      "tags": ["ssl", "tls", "deep"],
+      "alternatives": ["sslscan"]
+    },
+    {
+      "tools_name": "gitleaks",
+      "description": "Deteksi secret ter-commit di repositori publik (github dork).",
+      "category": "recon",
+      "local": false,
+      "command": { "base": "gitleaks", "positional": [] },
+      "phase": ["recon"],
+      "tags": ["secret", "osint", "github"],
+      "alternatives": ["trufflehog", "secretfinder"]
+    },
+    {
+      "tools_name": "feroxbuster",
+      "description": "Content discovery web: directory + file brute, support recursion.",
+      "category": "enumeration",
+      "local": false,
+      "command": { "base": "feroxbuster", "flags": ["-u", "-w"], "positional": [] },
+      "phase": ["enumeration"],
+      "tags": ["web", "directory", "brute"],
+      "alternatives": ["ffuf", "gobuster", "dirsearch"]
+    }
+  ]
+}
