@@ -7,6 +7,17 @@ ujiscan
 *.db
 *.log
 
+# Secrets — JANGAN commit API keys / credentials
+.env
+.env.*
+*.key
+*.pem
+!agents/tools-catalog.json
+
+# Data runtime (scan persistence)
+data/
+*.scans.json
+
 # IDE
 .vscode/
 .idea/

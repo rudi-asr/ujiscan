@@ -16,18 +16,32 @@ import (
 
 // Handler holds dependencies for API handlers
 type Handler struct {
-	scanStore      *store.ScanStore
+	scanStore      store.ScanStoreInterface
 	executor       *tools.Executor
 	playbookEngine *playbook.Engine
 }
 
 // NewHandler creates a new API handler
-func NewHandler(scanStore *store.ScanStore, toolExecutor *tools.Executor, pbEngine *playbook.Engine) *Handler {
+func NewHandler(scanStore store.ScanStoreInterface, toolExecutor *tools.Executor, pbEngine *playbook.Engine) *Handler {
 	return &Handler{
 		scanStore:      scanStore,
 		executor:       toolExecutor,
 		playbookEngine: pbEngine,
 	}
+}
+
+// HandleListScans returns scan history (terbaru dulu) — untuk dashboard.
+func (h *Handler) HandleListScans(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	limit := 20
+	scans := h.scanStore.ListScans(limit)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(scans)
 }
 
 // ToolInfo represents tool information in JSON

@@ -240,10 +240,37 @@ func (c *Client) ExtractVulnerabilities(ctx context.Context, toolName string, ou
 	// System prompt dari .md (skill vulnscan + rules) — konsisten severity
 	sysPrompt, _ := c.knowledge.BuildSystemPrompt("vulnscan", "")
 
-	// Inject skill vuln spesifik jika ada (mis. tool nuclei → ujiscan-vuln-dll generic,
-	// tool terkait xss → ujiscan-vuln-xss). AI diberi knowledge bertarget.
+	// Seleksi skill vuln DINAMIS berdasarkan tool/konteks output (hemat token):
+	// hanya skill yang relevan dengan tool pemindai + skill global (header/ssl).
+	relevant := map[string]string{
+		"nuclei":   "ujiscan-vuln-xss,ujiscan-vuln-sqli,ujiscan-vuln-ssrf,ujiscan-vuln-lfi,ujiscan-vuln-ssti,ujiscan-vuln-idor,ujiscan-vuln-open-redirect",
+		"nikto":    "ujiscan-vuln-header,ujiscan-vuln-lfi,ujiscan-vuln-ssti",
+		"sslscan":  "ujiscan-vuln-ssl",
+		"testssl":  "ujiscan-vuln-ssl",
+		"nmap":     "ujiscan-vuln-ssl,ujiscan-vuln-header",
+		"whatweb":  "ujiscan-vuln-header",
+		"httpx":    "ujiscan-vuln-header,ujiscan-vuln-open-redirect",
+		"gobuster": "ujiscan-vuln-lfi,ujiscan-vuln-header",
+		"ffuf":     "ujiscan-vuln-sqli,ujiscan-vuln-xss,ujiscan-vuln-lfi",
+		"sqlmap":   "ujiscan-vuln-sqli",
+		"dalfox":   "ujiscan-vuln-xss",
+		"gitleaks": "", // no dedicated skill
+	}
+	skillNames := []string{}
+	if list, ok := relevant[strings.ToLower(toolName)]; ok {
+		for _, s := range strings.Split(list, ",") {
+			if s != "" {
+				skillNames = append(skillNames, s)
+			}
+		}
+	}
+	// Fallback: jika tool tak dikenal, masukkan skill inti (xss,sqli,lfi,ssrf)
+	if len(skillNames) == 0 {
+		skillNames = []string{"ujiscan-vuln-xss", "ujiscan-vuln-sqli", "ujiscan-vuln-lfi", "ujiscan-vuln-ssrf"}
+	}
+
 	skillCorpus := ""
-	for _, skill := range []string{"ujiscan-vuln-xss", "ujiscan-vuln-sqli", "ujiscan-vuln-ssrf", "ujiscan-vuln-idor", "ujiscan-vuln-lfi", "ujiscan-vuln-ssti", "ujiscan-vuln-open-redirect", "ujiscan-vuln-csrf", "ujiscan-vuln-header", "ujiscan-vuln-ssl"} {
+	for _, skill := range skillNames {
 		if content, err := c.knowledge.LoadSkillNama(skill); err == nil {
 			skillCorpus += "\n" + content
 		}

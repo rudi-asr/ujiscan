@@ -17,13 +17,13 @@ import (
 // Engine executes playbooks
 type Engine struct {
 	loader    *PlaybookLoader
-	scanStore *store.ScanStore
 	executor  *tools.Executor
+	scanStore store.ScanStoreInterface
 	aiClient  *ai.Client // AI client for agentic mode
 }
 
 // NewEngine creates a new playbook engine
-func NewEngine(loader *PlaybookLoader, scanStore *store.ScanStore, executor *tools.Executor) *Engine {
+func NewEngine(loader *PlaybookLoader, scanStore store.ScanStoreInterface, executor *tools.Executor) *Engine {
 	return &Engine{
 		loader:    loader,
 		scanStore: scanStore,

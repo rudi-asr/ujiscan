@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	// _ "github.com/mattn/go-sqlite3" // Disabled: requires CGO, using in-memory store instead
 
@@ -61,7 +62,14 @@ func Run() error {
 	}
 
 	// Initialize stores and tool executor
-	scanStore := store.NewScanStore()
+	// Persistence: gunakan ScanFileStore (data/scans.json) — aman dari restart
+	dataDir := os.Getenv("DATABASE_PATH")
+	if dataDir == "" {
+		dataDir = "data"
+	} else {
+		dataDir = filepath.Dir(dataDir) // DATABASE_PATH=/app/data/ujiscan.db → /app/data
+	}
+	scanStore := store.NewScanFileStore(dataDir)
 	toolExecutor := tools.NewExecutor(reg)
 
 	// Create registry executor if registry loaded (legacy)
@@ -151,11 +159,16 @@ func Run() error {
 	// API routes
 	mux.HandleFunc("/api/status", handleStatus)
 
+	// Rate limiting (keamanan — API publik via tunnel)
+	// Login: 20 req/menit/IP (anti brute force). Scan API: 30 req/menit/IP.
+	rl := api.NewRateLimiter(20, time.Minute, 20)
+	rlScan := api.NewRateLimiter(30, time.Minute, 30)
+
 	// Auth routes (no authentication required for login)
-	mux.HandleFunc("/auth/login", authHandler.HandleLogin)
+	mux.HandleFunc("/auth/login", rl.RateLimitMiddleware(authHandler.HandleLogin))
 	mux.HandleFunc("/auth/logout", authHandler.HandleLogout)
 	mux.HandleFunc("/auth/me", authHandler.HandleMe)
-	mux.HandleFunc("/auth/change-password", authHandler.HandleChangePassword)
+	mux.HandleFunc("/auth/change-password", rl.RateLimitMiddleware(authHandler.HandleChangePassword))
 
 	// User management routes (admin only)
 	adminOnly := auth.RequireRoles(auth.RoleAdmin)
@@ -322,14 +335,23 @@ func Run() error {
 	mux.HandleFunc("/api/stats", apiHandler.HandleStats)
 	mux.HandleFunc("/api/playbooks", apiHandler.HandleListPlaybooks)
 
+	// Scan history (semua scan, terbaru dulu) — untuk dashboard
+	mux.HandleFunc("/api/scans", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		apiHandler.HandleListScans(w, r)
+	})
+
 	// Scan API routes with custom handler
-	mux.HandleFunc("/api/scan", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/api/scan", rlScan.RateLimitMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost {
 			apiHandler.HandleStartScan(w, r)
 		} else {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
-	})
+	}))
 
 	// Playbook scan endpoint (supports both regular and agentic via query param or path)
 	mux.HandleFunc("/api/scan/playbook", func(w http.ResponseWriter, r *http.Request) {
@@ -418,16 +440,15 @@ func Run() error {
 	log.Printf("  POST /api/users/create   - Create user (admin only)")
 	log.Printf("CORS enabled for: http://localhost:8081, https://rudi-asr.github.io")
 	log.Printf("")
-	log.Printf("DEFAULT CREDENTIALS (CHANGE IN PRODUCTION):")
-	log.Printf("  Email: admin@ujiscan.local")
-	log.Printf("  Password: admin123")
+	log.Printf("Security: rate limiting active (login 20/mnt, scan 30/mnt per IP)")
+	log.Printf("Security: security headers active (CSP, nosniff, frame-deny, no-store)")
 
-	// Wrap mux with CORS + auth + compression middleware.
+	// Wrap mux with CORS + security headers + auth + compression middleware.
 	// NOTE: CORS MUST be outermost so every response (including 401/403)
 	// carries Access-Control-* headers — otherwise browsers report
 	// "Failed to fetch" instead of a readable error.
 	authMiddleware := auth.AuthMiddleware(tokenManager)
-	return http.ListenAndServe(Port, corsMiddleware(authMiddleware(compression.Middleware(mux))))
+	return http.ListenAndServe(Port, corsMiddleware(securityHeadersMiddleware(authMiddleware(compression.Middleware(mux)))))
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -493,6 +514,21 @@ func corsMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		next.ServeHTTP(w, r)
+	})
+}
+
+// securityHeadersMiddleware menambahkan security headers ke semua response.
+func securityHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		// Izinkan CDN marked.js; API ini JSON-only jadi default 'default-src none'
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.trycloudflare.com https://api.deepseek.com https://api.openai.com https://api.anthropic.com; img-src 'self' data:; frame-ancestors 'none'")
+		// Cache-control untuk API respons (hindari caching data sensitif)
+		w.Header().Set("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
 }
