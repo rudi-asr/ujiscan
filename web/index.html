@@ -687,6 +687,7 @@ async function handleLogin(){
             refreshAuthUI();
             toast('Login berhasil — selamat datang!', 'success');
             loadTools();
+            loadScanHistory();
             go('dashboard');
         } else toast('Invalid email or password', 'error');
     } catch(e){ toast('Login gagal: backend tidak terjangkau di '+API_BASE, 'error'); }
@@ -786,9 +787,18 @@ function pollScanStatus(){
             renderFindings();
             renderAITimeline();
             renderReport();
-            renderDashboard();
+            loadScanHistory();
             toast('Scan selesai — laporan siap!', 'success');
-        } else if (d.status==='failed') addLog('Scan failed: '+(d.error||''), 'error');
+        } else if (d.status==='failed') {
+            stopPolling = true;
+            latestScan = d;
+            addLog('Scan failed: '+(d.error||''), 'error');
+            document.getElementById('scanStatus').innerHTML =
+                `<span class="badge failed">FAILED</span>
+                 <p style="margin-top:10px; font-size:13px; color:var(--error);">${esc(d.error||'Scan gagal')}</p>
+                 <p style="margin-top:6px; font-size:12px; color:var(--muted);">${esc(d.target||'')} — cek log untuk detail.</p>`;
+            toast('Scan gagal', 'error');
+        }
     })
     .catch(e=>addLog('Polling error: '+e.message, 'error'));
 }
@@ -896,22 +906,17 @@ function renderReport(){
     const total = findings.length;
     const risk = total ? Math.min(10, Math.round((c.critical*9 + c.high*6 + c.medium*3 + c.low*1) / Math.max(1,total))) : 0;
 
-    // Parse Markdown AI report → HTML
+    // Parse Markdown AI report → HTML (menggunakan marked.js — robust)
     let aiHtml = '';
     if (s.ai_report) {
-        const md = s.ai_report;
-        let h = md
-            .replace(/^# (.*)$/gm, '<h2>$1</h2>')
-            .replace(/^## (.*)$/gm, '<h3>$1</h3>')
-            .replace(/^### (.*)$/gm, '<h4>$1</h4>')
-            .replace(/^\|(.*)\|$/gm, (m)=>{ const cells=m.slice(1,-1).split('|').map(x=>x.trim()); return '<tr>'+cells.map(x=>x.startsWith('-')?'<th></th>':'<td>'+inline(x)+'</td>').join('')+'</tr>'; })
-            .replace(/^- \*\*(.*?):\*\* (.*)$/gm, '<li><strong>$1:</strong> $2</li>')
-            .replace(/^- (.*)$/gm, '<li>$1</li>')
-            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-            .replace(/`([^`]+)`/g, '<code>$1</code>')
-            .replace(/^_No findings\._$/gm, '<em>No findings.</em>')
-            .replace(/\n\n/g, '\n');
-        aiHtml = `<div class="markdown">${h}</div>`;
+        try {
+            const html = window.marked
+                ? marked.parse(s.ai_report)
+                : simpleMd(s.ai_report);
+            aiHtml = `<div class="markdown">${html}</div>`;
+        } catch (e) {
+            aiHtml = `<div class="markdown"><pre>${esc(s.ai_report)}</pre></div>`;
+        }
     }
 
     const sevHTML = total ? `
@@ -975,6 +980,61 @@ function renderReport(){
 
 function inline(t){ return t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>'); }
 
+// Fallback markdown sederhana (jika CDN marked gagal load)
+function simpleMd(text){
+    let h = esc(text)
+        .replace(/^### (.*)$/gm, '<h4>$1</h4>')
+        .replace(/^## (.*)$/gm, '<h3>$1</h3>')
+        .replace(/^# (.*)$/gm, '<h2>$1</h2>')
+        .replace(/^\|(.*)\|$/gm, (m)=>{ const cells=m.slice(1,-1).split('|').map(x=>x.trim()); return '<tr>'+cells.map(x=>x.startsWith('-')?'<th></th>':'<td>'+inline(x)+'</td>').join('')+'</tr>'; })
+        .replace(/^- \*\*(.*?):\*\* (.*)$/gm, '<li><strong>$1:</strong> $2</li>')
+        .replace(/^- (.*)$/gm, '<li>$1</li>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\n\n/g, '\n');
+    return h;
+}
+
+// ============================================================================
+// SCAN HISTORY (GET /api/scans) — dashboard
+// ============================================================================
+function loadScanHistory(){
+    if (!authToken) return;
+    fetch(`${API_BASE}/api/scans`, { headers:{'Authorization':`Bearer ${authToken}`} })
+    .then(r=>r.json())
+    .then(list=>{
+        if (!Array.isArray(list)) return;
+        scanHistory = list;
+        renderScanHistory();
+    })
+    .catch(()=>{ /* backend belum support — abaikan */ });
+}
+
+function renderScanHistory(){
+    const el = document.getElementById('dRecent');
+    if (!scanHistory.length) {
+        el.innerHTML = '<div class="empty"><p>Belum ada scan.</p><button class="btn btn-sm" style="margin-top:10px;" onclick="go(\'scan\')">Mulai Scan</button></div>';
+        return;
+    }
+    el.innerHTML = scanHistory.slice(0,6).map(s=>`
+        <div class="scan-row" onclick="viewScan('${s.id}')">
+            <span class="badge ${s.status}">${s.status.toUpperCase()}</span>
+            <span class="sr-target">${esc(s.target)}</span>
+            <span class="sr-type ${s.scan_type==='full-scan-ai'?'ai':''}">${esc(s.scan_type||'')}${s.model?' · '+esc(s.model):''}</span>
+            <span class="sr-meta">${s.findings?s.findings.length:0} findings · ${s.results?s.results.length:0} outputs</span>
+        </div>`).join('') || '<div class="empty">Belum ada scan.</div>';
+}
+
+function viewScan(id){
+    fetch(`${API_BASE}/api/scan/${id}`, { headers:{'Authorization':`Bearer ${authToken}`} })
+    .then(r=>r.json())
+    .then(data=>{
+        latestScan = data;
+        renderReport(); renderFindings(); renderAITimeline(); displayResults(data); updateScanStatus(data);
+        go('report');
+    })
+    .catch(e=>toast('Gagal load scan: '+e.message, 'error'));
+}
+
 function exportReport(){
     const html = document.getElementById('reportContent').innerHTML;
     const full = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>ujiscan Report</title>
@@ -1016,6 +1076,7 @@ function loadTools(){
 // ============================================================================
 function renderDashboard(){
     const rec = document.getElementById('dRecent');
+    if (scanHistory.length) { renderScanHistory(); return; }
     if (!latestScan) { rec.innerHTML = '<div class="empty"><p>Belum ada scan.</p><button class="btn btn-sm" style="margin-top:10px;" onclick="go(\'scan\')">Mulai Scan</button></div>'; return; }
     const s = latestScan;
     rec.innerHTML = `<div class="scan-row" onclick="go('report')">
@@ -1024,6 +1085,7 @@ function renderDashboard(){
         <span class="sr-type ${s.scan_type==='full-scan-ai'?'ai':''}">${esc(s.scan_type||'')}${s.model?' · '+esc(s.model):''}</span>
         <span class="sr-meta">${s.findings?s.findings.length:0} findings · ${s.results?s.results.length:0} outputs</span>
     </div>`;
+    if (authToken) loadScanHistory();
 }
 
 // ============================================================================
@@ -1063,7 +1125,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     refreshAuthUI();
     renderQuickTools();
     addLog('ujiscan frontend siap — '+(isLocalhost?'localhost':'github pages'), 'info');
-    if (authToken) { loadTools(); go('dashboard'); }
+    if (authToken) { loadTools(); loadScanHistory(); go('dashboard'); }
     else go('dashboard');
 });
 </script>
