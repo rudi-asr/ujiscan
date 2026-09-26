@@ -39,7 +39,12 @@ func (e *Executor) Execute(ctx context.Context, toolName string, params map[stri
 	case "subfinder":
 		cmdStr = fmt.Sprintf("echo 'subfinder -d %s %s' && subfinder -d %s %s 2>&1 | head -50 || echo 'subfinder not installed'", target, args, target, args)
 	case "nmap":
-		cmdStr = fmt.Sprintf("nmap %s %s 2>&1 | head -100 || echo 'nmap not available'", target, args)
+			// Default: port umum + timeout eksternal (pengaman ganda, jangan full 65535)
+			if strings.TrimSpace(args) == "" {
+				cmdStr = fmt.Sprintf("timeout 120 nmap -sV -T4 -p 22,80,443,3306,5432,6379,27017,8080,8443,8000,5000,3000 %s 2>&1 | head -100 || echo 'nmap not available/timed out'", target)
+			} else {
+				cmdStr = fmt.Sprintf("timeout 120 nmap %s %s 2>&1 | head -100 || echo 'nmap not available/timed out'", target, args)
+			}
 	case "httpx":
 		cmdStr = fmt.Sprintf("echo 'httpx probing %s' && httpx -u http://%s %s 2>&1 | head -50 || echo 'httpx not installed'", target, target, args)
 	case "whatweb":
