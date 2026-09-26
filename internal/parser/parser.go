@@ -36,6 +36,14 @@ func ParseToolOutput(toolOutput *models.ToolOutput, scanID string) []models.Find
 		findings = parseHttpxOutput(toolOutput.Stdout, scanID, toolOutput.Target)
 	case "whatweb":
 		findings = parseWhatwebOutput(toolOutput.Stdout, scanID, toolOutput.Target)
+	case "sslscan":
+		findings = parseSslscanOutput(toolOutput.Stdout, scanID, toolOutput.Target)
+	case "nuclei":
+		findings = parseNucleiOutput(toolOutput.Stdout, scanID, toolOutput.Target)
+	case "gobuster":
+		findings = parseGobusterOutput(toolOutput.Stdout, scanID, toolOutput.Target)
+	case "nikto":
+		findings = parseNiktoOutput(toolOutput.Stdout, scanID, toolOutput.Target)
 	}
 
 	// Add tool name to all findings
@@ -329,4 +337,242 @@ func isCommonPort(port int) bool {
 		}
 	}
 	return false
+}
+
+// parseSslscanOutput extracts SSL/TLS vulnerabilities from sslscan output
+func parseSslscanOutput(output string, scanID string, target string) []models.Finding {
+	var findings []models.Finding
+	
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		
+		// Weak ciphers
+		if strings.Contains(strings.ToLower(line), "accept") && 
+		   (strings.Contains(strings.ToLower(line), "rc4") || 
+		    strings.Contains(strings.ToLower(line), "md5") ||
+		    strings.Contains(strings.ToLower(line), "sslv2") ||
+		    strings.Contains(strings.ToLower(line), "sslv3")) {
+			findings = append(findings, models.Finding{
+				FindingType: models.FindingTypeWeakSSL,
+				Severity:    models.SeverityHigh,
+				Title:       "Weak SSL/TLS Cipher Detected",
+				Description: fmt.Sprintf("Weak or insecure cipher suite enabled on %s", target),
+				Evidence:    line,
+				Remediation: "Disable weak ciphers (RC4, MD5, SSLv2, SSLv3). Use TLS 1.2+ with strong ciphers only.",
+				Hostname:    target,
+			})
+		}
+		
+		// Expired or self-signed certificates
+		if strings.Contains(strings.ToLower(line), "expired") || 
+		   strings.Contains(strings.ToLower(line), "self-signed") {
+			findings = append(findings, models.Finding{
+				FindingType: models.FindingTypeWeakSSL,
+				Severity:    models.SeverityMedium,
+				Title:       "Certificate Issue Detected",
+				Description: "SSL/TLS certificate problem found",
+				Evidence:    line,
+				Remediation: "Replace expired or self-signed certificates with valid CA-signed certificates",
+				Hostname:    target,
+			})
+		}
+	}
+	
+	return findings
+}
+
+// parseNucleiOutput extracts vulnerabilities from nuclei output
+func parseNucleiOutput(output string, scanID string, target string) []models.Finding {
+	var findings []models.Finding
+	
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "[") && !strings.Contains(line, "[critical]") && 
+		   !strings.Contains(line, "[high]") && !strings.Contains(line, "[medium]") && 
+		   !strings.Contains(line, "[low]") && !strings.Contains(line, "[info]") {
+			continue
+		}
+		
+		// Nuclei output format: [template-id] [severity] Title [url]
+		// Example: [CVE-2021-12345] [high] Apache Log4j RCE [http://target.com]
+		
+		var severity models.Severity
+		var title, templateID, url string
+		
+		// Extract severity
+		if strings.Contains(strings.ToLower(line), "[critical]") {
+			severity = models.SeverityCritical
+		} else if strings.Contains(strings.ToLower(line), "[high]") {
+			severity = models.SeverityHigh
+		} else if strings.Contains(strings.ToLower(line), "[medium]") {
+			severity = models.SeverityMedium
+		} else if strings.Contains(strings.ToLower(line), "[low]") {
+			severity = models.SeverityLow
+		} else {
+			severity = models.SeverityInfo
+		}
+		
+		// Try to extract template ID (first bracketed value that's not severity)
+		re := regexp.MustCompile(`\[([^\]]+)\]`)
+		matches := re.FindAllStringSubmatch(line, -1)
+		for _, match := range matches {
+			val := match[1]
+			if !strings.Contains(strings.ToLower(val), "critical") &&
+			   !strings.Contains(strings.ToLower(val), "high") &&
+			   !strings.Contains(strings.ToLower(val), "medium") &&
+			   !strings.Contains(strings.ToLower(val), "low") &&
+			   !strings.Contains(strings.ToLower(val), "info") {
+				templateID = val
+				break
+			}
+		}
+		
+		// Extract URL (last bracketed http/https value)
+		urlRe := regexp.MustCompile(`\[(https?://[^\]]+)\]`)
+		if urlMatch := urlRe.FindStringSubmatch(line); len(urlMatch) > 1 {
+			url = urlMatch[1]
+		}
+		
+		// Title is everything between template and URL
+		title = line
+		if templateID != "" {
+			title = strings.Replace(title, "["+templateID+"]", "", 1)
+		}
+		title = re.ReplaceAllString(title, "")
+		title = strings.TrimSpace(title)
+		
+		if title == "" {
+			title = "Vulnerability Detected"
+		}
+		
+		finding := models.Finding{
+			FindingType: models.FindingTypeOther,
+			Severity:    severity,
+			Title:       title,
+			Description: fmt.Sprintf("Nuclei template %s matched on %s", templateID, target),
+			Evidence:    line,
+			Remediation: "Review vulnerability details and apply vendor patches. Consult CVE database for specific remediation.",
+			Hostname:    target,
+		}
+		
+		findings = append(findings, finding)
+	}
+	
+	return findings
+}
+
+// parseGobusterOutput extracts discovered directories and files from gobuster output
+func parseGobusterOutput(output string, scanID string, target string) []models.Finding {
+	var findings []models.Finding
+	
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "===============") || 
+		   strings.HasPrefix(line, "Gobuster") || strings.Contains(line, "Progress:") {
+			continue
+		}
+		
+		// Gobuster format: /path (Status: 200) [Size: 1234]
+		// Extract path and status code
+		if strings.Contains(line, "(Status:") {
+			parts := strings.Split(line, "(Status:")
+			if len(parts) >= 2 {
+				path := strings.TrimSpace(parts[0])
+				statusPart := parts[1]
+				
+				// Extract status code
+				statusRe := regexp.MustCompile(`(\d+)`)
+				statusMatch := statusRe.FindStringSubmatch(statusPart)
+				statusCode := ""
+				if len(statusMatch) > 1 {
+					statusCode = statusMatch[1]
+				}
+				
+				severity := models.SeverityInfo
+				remediation := "Review discovered paths for sensitive information exposure"
+				
+				// Sensitive paths
+				lowerPath := strings.ToLower(path)
+				if strings.Contains(lowerPath, "admin") || strings.Contains(lowerPath, "backup") ||
+				   strings.Contains(lowerPath, ".git") || strings.Contains(lowerPath, ".env") ||
+				   strings.Contains(lowerPath, "config") || strings.Contains(lowerPath, "sql") {
+					severity = models.SeverityMedium
+					remediation = "Sensitive path detected. Restrict access or remove if not needed."
+				}
+				
+				finding := models.Finding{
+					FindingType: models.FindingTypeOther,
+					Severity:    severity,
+					Title:       fmt.Sprintf("Directory/File Found: %s", path),
+					Description: fmt.Sprintf("Discovered accessible path on %s (Status: %s)", target, statusCode),
+					Evidence:    line,
+					Remediation: remediation,
+					Hostname:    target,
+				}
+				findings = append(findings, finding)
+			}
+		}
+	}
+	
+	return findings
+}
+
+// parseNiktoOutput extracts web vulnerabilities from nikto output
+func parseNiktoOutput(output string, scanID string, target string) []models.Finding {
+	var findings []models.Finding
+	
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "-") || strings.HasPrefix(line, "+") ||
+		   strings.Contains(line, "Nikto v") || strings.Contains(line, "Target IP") ||
+		   strings.Contains(line, "Target Hostname") || strings.Contains(line, "Start Time") {
+			continue
+		}
+		
+		// Nikto format: + Item description
+		// Severity based on keywords
+		var severity models.Severity
+		lowerLine := strings.ToLower(line)
+		
+		if strings.Contains(lowerLine, "vulnerability") || strings.Contains(lowerLine, "injection") ||
+		   strings.Contains(lowerLine, "xss") || strings.Contains(lowerLine, "sql") {
+			severity = models.SeverityHigh
+		} else if strings.Contains(lowerLine, "outdated") || strings.Contains(lowerLine, "version") ||
+		          strings.Contains(lowerLine, "misconfiguration") {
+			severity = models.SeverityMedium
+		} else if strings.Contains(lowerLine, "header") || strings.Contains(lowerLine, "cookie") {
+			severity = models.SeverityLow
+		} else {
+			severity = models.SeverityInfo
+		}
+		
+		// Skip non-finding lines
+		if !strings.HasPrefix(line, "+") && !strings.Contains(line, "OSVDB") && 
+		   !strings.Contains(line, "CVE") {
+			continue
+		}
+		
+		title := strings.TrimPrefix(line, "+ ")
+		if len(title) > 100 {
+			title = title[:100] + "..."
+		}
+		
+		finding := models.Finding{
+			FindingType: models.FindingTypeOther,
+			Severity:    severity,
+			Title:       title,
+			Description: fmt.Sprintf("Nikto web vulnerability scan finding on %s", target),
+			Evidence:    line,
+			Remediation: "Review Nikto output and apply recommended security configurations",
+			Hostname:    target,
+		}
+		
+		findings = append(findings, finding)
+	}
+	
+	return findings
 }

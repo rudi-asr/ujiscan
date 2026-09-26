@@ -1,8 +1,8 @@
 ---
 name: "Regular Scan"
-description: "Comprehensive regular security scan with multiple tools"
+description: "Comprehensive security scan - full replication of professional pentest scanning"
 author: "ujiscan"
-version: "1.0"
+version: "2.0"
 entry_phase: "recon"
 ---
 
@@ -10,58 +10,70 @@ entry_phase: "recon"
 
 ### dig-lookup
 Tool: dig
-Args: []
-Description: Perform DNS lookup
+Args: [ANY]
+Description: Perform comprehensive DNS lookup (all record types)
 Condition: ""
 
 ### subfinder-subdomain-discovery
 Tool: subfinder
-Args: [-json]
-Description: Discover subdomains
+Args: [-all, -recursive, -silent]
+Description: Discover subdomains with all sources
 Condition: ""
 
-### nmap-ping-discovery
+### nmap-host-discovery
 Tool: nmap
-Args: [-sn -oJ -]
-Description: Discover live hosts using ping scan
+Args: [-sn, -PE, -PP, -PM]
+Description: Discover live hosts using multiple ping techniques
 Condition: ""
 
 ## enum
 
 ### httpx-http-probing
 Tool: httpx
-Args: []
-Description: Probe HTTP services
+Args: [-follow-redirects, -status-code, -title, -tech-detect, -server]
+Description: Comprehensive HTTP service probing with tech detection
 Condition: ""
 
-### nmap-port-scan
+### nmap-tcp-full-scan
 Tool: nmap
-Args: [-p 22,80,443,3306,5432,6379,27017,8080,8443,8000,5000,3000 -sV -sC -oJ -]
-Description: Comprehensive port scan with service detection
+Args: [-p-, -sV, -sC, -T4, --version-intensity, "5"]
+Description: Complete TCP port scan (all 65535 ports) with service detection and default scripts
+Condition: ""
+
+### nmap-udp-common-scan
+Tool: nmap
+Args: [-sU, -p, "53,67,68,69,123,137,138,161,162,500,514,520,631,1434,1900,4500,5353", -sV]
+Description: UDP port scan of common services
 Condition: ""
 
 ### whatweb-fingerprinting
 Tool: whatweb
-Args: []
-Description: Web technology fingerprinting
+Args: [-a, "3", --log-json=-]
+Description: Aggressive web technology fingerprinting (level 3)
 Condition: ""
 
-### sslscan-ssl-audit
+### sslscan-comprehensive
 Tool: sslscan
-Args: []
-Description: SSL/TLS certificate and configuration audit
+Args: [--show-certificate, --show-client-cas, --show-ciphers, --show-sigs, --no-colour]
+Description: Comprehensive SSL/TLS audit - certificates, ciphers, vulnerabilities
 Condition: ""
 
-## exploit
+## vulnscan
 
-### nuclei-vuln-scan
+### nuclei-cve-scan
 Tool: nuclei
-Args: [-json]
-Description: Scan for vulnerabilities with nuclei
+Args: [-t, "cves/", -t, "vulnerabilities/", -t, "exposures/", -severity, "critical,high,medium", -silent, -jsonl]
+Description: Comprehensive vulnerability scan - all CVE and vulnerability templates
 Condition: ""
 
-### nikto-web-scan
+### gobuster-directory-scan
+Tool: gobuster
+Args: [-w, "/tmp/common.txt", -k, -q, -e, -r]
+Description: Web directory and file brute-force discovery
+Condition: ""
+
+### nikto-web-vuln-scan
 Tool: nikto
-Args: []
-Description: Web server vulnerability scanning
+Args: [-Tuning, "x", -Display, "V", -Format, "txt"]
+Description: Comprehensive web server vulnerability scan (all checks)
 Condition: ""

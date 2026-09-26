@@ -80,6 +80,9 @@ COPY playbooks ./playbooks
 # Copy agent knowledge files (.md rahasia - otak Full Scan AI)
 COPY agents ./agents
 
+# Setup gobuster wordlist from playbooks
+RUN cp /app/playbooks/common-wordlist.txt /tmp/common.txt && chmod 644 /tmp/common.txt
+
 # Create directory for database
 RUN mkdir -p /app/data
 

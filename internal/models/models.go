@@ -21,6 +21,7 @@ type PhaseType string
 const (
 	PhaseRecon    PhaseType = "recon"
 	PhaseEnum     PhaseType = "enum"
+	PhaseVulnscan PhaseType = "vulnscan"
 	PhaseExploit  PhaseType = "exploit"
 	PhaseVerify   PhaseType = "verify"
 	PhaseReport   PhaseType = "report"
