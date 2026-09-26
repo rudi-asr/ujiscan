@@ -31,11 +31,28 @@ type Scan struct {
 	ID        string        `json:"id"`
 	Target    string        `json:"target"`
 	Status    ScanStatus    `json:"status"`
+	ScanType  string        `json:"scan_type,omitempty"`  // regular, quick, full-scan-ai
+	Model     string        `json:"model,omitempty"`      // AI engine: deepseek, openai, claude
 	StartedAt time.Time     `json:"started_at"`
 	EndedAt   *time.Time    `json:"ended_at,omitempty"`
 	Results   []ToolOutput  `json:"results"`
 	Findings  []Finding     `json:"findings"`      // Parsed findings from tools
 	Error     string        `json:"error,omitempty"`
+	// AI agentic scan (Full Scan AI) — decision & report, ditampilkan di UI
+	AIDecisions []AIDecision `json:"ai_decisions,omitempty"` // per-phase AI decisions
+	AIReport    string        `json:"ai_report,omitempty"`   // final AI-generated report (markdown)
+	AIReasoning string        `json:"ai_reasoning,omitempty"` // latest AI reasoning summary
+}
+
+// AIDecision represents one AI decision per phase (dari Full Scan AI)
+type AIDecision struct {
+	Phase            string   `json:"phase"`
+	Analysis         string   `json:"analysis"`
+	RecommendedTools []string `json:"recommended_tools"`
+	Reasoning        string   `json:"reasoning"`
+	Confidence       float64  `json:"confidence"`
+	StopScan         bool     `json:"stop_scan"`
+	Timestamp        time.Time `json:"timestamp"`
 }
 
 // PlaybookStep represents a single step in a playbook

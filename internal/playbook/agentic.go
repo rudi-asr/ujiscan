@@ -29,6 +29,9 @@ func NewAgenticExecutor(engine *Engine, provider string) *AgenticExecutor {
 func (ae *AgenticExecutor) ExecuteAgenticScan(ctx context.Context, scanID string, target string, scanType string) error {
 	fmt.Printf("[agentic] Starting agentic scan for %s (type=%s, scan_id=%s)\n", target, scanType, scanID)
 
+	// Meta: scan type + AI model (untuk UI)
+	ae.engine.scanStore.SetScanMeta(scanID, "full-scan-ai", ae.aiClient.Provider())
+
 	// Phase 1: AI recommends initial tools based on target
 	fmt.Printf("[agentic] Phase 1: AI tool selection for %s\n", target)
 	selectedTools, err := ae.aiClient.SelectToolsForTarget(ctx, target, scanType)
@@ -88,6 +91,17 @@ func (ae *AgenticExecutor) ExecuteAgenticScan(ctx context.Context, scanID string
 		}
 		lastDecision = decision
 
+		// Simpan decision AI per fase (untuk UI reasoning)
+		ae.engine.scanStore.AddAIDecision(scanID, models.AIDecision{
+			Phase:            phase,
+			Analysis:         decision.Analysis,
+			RecommendedTools: decision.RecommendedTools,
+			Reasoning:        decision.Reasoning,
+			Confidence:       decision.Confidence,
+			StopScan:         decision.StopScan,
+			Timestamp:        time.Now(),
+		})
+
 		// C.4.2: decide whether to continue to the next phase
 		if !ae.ShouldContinueToPhase(phaseResults, decision, totalFindings) {
 			fmt.Printf("[agentic] Adaptive loop stopping after %s phase\n", phase)
@@ -101,6 +115,9 @@ func (ae *AgenticExecutor) ExecuteAgenticScan(ctx context.Context, scanID string
 	fmt.Printf("[agentic] Generating final AI report\n")
 	finalReport := ae.generateFinalReport(ctx, scanID, target)
 	fmt.Printf("[agentic] Final report:\n%s\n", finalReport)
+
+	// Simpan final report AI (untuk UI report viewer)
+	ae.engine.scanStore.SetAIReport(scanID, finalReport)
 
 	// Mark scan complete
 	ae.engine.scanStore.UpdateScanStatus(scanID, models.ScanStatusCompleted)

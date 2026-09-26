@@ -99,6 +99,50 @@ func (s *ScanStore) AddFinding(id string, finding models.Finding) error {
 	return nil
 }
 
+// AddAIDecision appends an AI decision (per phase) ke scan
+func (s *ScanStore) AddAIDecision(id string, decision models.AIDecision) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	scan, ok := s.scans[id]
+	if !ok {
+		return fmt.Errorf("scan %s not found", id)
+	}
+
+	scan.AIDecisions = append(scan.AIDecisions, decision)
+	scan.AIReasoning = decision.Analysis
+	return nil
+}
+
+// SetAIReport stores the final AI-generated report (markdown) ke scan
+func (s *ScanStore) SetAIReport(id string, report string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	scan, ok := s.scans[id]
+	if !ok {
+		return fmt.Errorf("scan %s not found", id)
+	}
+
+	scan.AIReport = report
+	return nil
+}
+
+// SetScanMeta stores scan type + AI model
+func (s *ScanStore) SetScanMeta(id string, scanType string, model string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	scan, ok := s.scans[id]
+	if !ok {
+		return fmt.Errorf("scan %s not found", id)
+	}
+
+	scan.ScanType = scanType
+	scan.Model = model
+	return nil
+}
+
 // CompleteScan marks a scan as completed
 func (s *ScanStore) CompleteScan(id string, err error) error {
 	s.mu.Lock()

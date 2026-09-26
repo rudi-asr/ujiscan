@@ -109,6 +109,9 @@ func (h *Handler) HandleStartScan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Store scan type + model meta untuk UI
+	h.scanStore.SetScanMeta(scan.ID, req.ScanType, req.Model)
+
 	// Route to appropriate executor based on scanType
 	go func() {
 		ctx := context.Background()
